@@ -721,9 +721,18 @@ classdef pop_single < handle
             for ii = 1:size(true_pop,3), cell_pop{1,1,ii} = true_pop(:,:,ii); end %#ok
             
             % then evaluate all functions with cellfun
-            for ii = 1:numel(pop.funfcn)
+            if isa(pop, 'pop_multi') && numel(pop.funfcn) == 1
+              % if multi-objectives returned as column vector by single
+              % function, cellfun doesn't work directly - CG
+              pop.pop_data.function_values_offspring(sites, :) = ...
+                  permute(cell2mat(cellfun(pop.funfcn{1}, cell_pop, ...
+                                  'UniformOutput', false)), [3 2 1]);
+            else
+              % otherwise use cellfun directly - CG
+              for ii = 1:numel(pop.funfcn)
                 pop.pop_data.function_values_offspring(sites, ii) = ...
                     cellfun(pop.funfcn{ii}, cell_pop);
+              end
             end
             
             % update number of function evaluations
