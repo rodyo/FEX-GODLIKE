@@ -606,7 +606,12 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         parent_fits = zeros(popsize, options.num_objectives);  offspring_fits = parent_fits;               
         if multi
             front_numbers      = zeros(popsize, 1);  
-            crowding_distances = [front_numbers;front_numbers];    
+            if (generation == 2)
+              % only one set after 1st generation
+              crowding_distances = [front_numbers];    
+            else
+              crowding_distances = [front_numbers;front_numbers];    
+            end
         end
         lfe1 = 0;   lfe2 = 0;    % Last Filled Entry (lfe)
         
@@ -626,11 +631,18 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
             % stuff specific for multi-objective optimization
             if multi
                 front_numbers(lfe1+1:lfe1+popsz, :)        = popinfo.front_number;
-                crowding_distances(lfe2+1:lfe2+2*popsz, :) = popinfo.crowding_distance;
+                if (generation == 2)
+                  multisize = popsz;
+                else
+                  multisize = 2*popsz; 
+                end
+                crowding_distances(lfe2+1:lfe2+multisize, :) = ...
+                      popinfo.crowding_distance;
+                lfe2 = lfe2 + multisize;
             end
             
             % update indices
-            lfe1 = lfe1 + popsz;  lfe2 = lfe2 + 2*popsz;
+            lfe1 = lfe1 + popsz;  
             
         end % for
         
@@ -639,7 +651,12 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);  
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
         if multi
-            [dummy, rndinds2]  = sort(rand(2*popsize, 1));
+          if (generation == 2)
+            multisize = popsize;
+          else
+            multisize = 2*popsize; 
+          end
+            [dummy, rndinds2]  = sort(rand(multisize, 1));
             front_numbers      = front_numbers(rndinds,:);            
             crowding_distances = crowding_distances(rndinds2,:);
         end        
