@@ -528,7 +528,9 @@ classdef pop_single < handle
                             newpop = newpop(:, space_ind+1:end);
                         end
                         % assign newpop
-                        newpop = signs.*temp_pop;                        
+                        % CG: removed 'signs.*' because it's not needed:
+                        % Real representation preserves signs? 
+                        newpop = temp_pop; 
                     end
                                      
                 % Adpative Simulated Annealing
