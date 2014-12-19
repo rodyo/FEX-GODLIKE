@@ -512,7 +512,10 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 fevals = fevals + 1;
                 
                 % see whether single must be changed to multi
-                if single && (numel(sol) > 1), single = false; end
+                if single && (numel(sol) > 1)
+                  single = false; 
+                  options.obj_columns = true;
+                end
                 
                 % it might happen that more than one function is provided, 
                 % but that one of the functions returns more than one function 

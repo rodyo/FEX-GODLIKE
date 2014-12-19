@@ -723,7 +723,7 @@ classdef pop_single < handle
             for ii = 1:size(true_pop,3), cell_pop{1,1,ii} = true_pop(:,:,ii); end %#ok
             
             % then evaluate all functions with cellfun
-            if isa(pop, 'pop_multi') && numel(pop.funfcn) == 1
+            if pop.options.obj_columns
               % if multi-objectives returned as column vector by single
               % function, cellfun doesn't work directly - CG
               pop.pop_data.function_values_offspring(sites, :) = ...
@@ -731,6 +731,7 @@ classdef pop_single < handle
                                   'UniformOutput', false)), [3 2 1]);
             else
               % otherwise use cellfun directly - CG
+              % TODO: without preallocation, this will be slow
               for ii = 1:numel(pop.funfcn)
                 pop.pop_data.function_values_offspring(sites, ii) = ...
                     cellfun(pop.funfcn{ii}, cell_pop);
@@ -742,7 +743,11 @@ classdef pop_single < handle
                 nnz(sites)*size(pop.pop_data.function_values_offspring, 2);%#ok
 
         end % function 
-           
+
+        function evaluate_function(pop)
+          
+        end % function
+          
         % check boundaries
         function [newpop, newfit] = honor_bounds(pop, newpop, newfit)
                                     

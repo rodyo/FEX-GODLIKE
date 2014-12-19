@@ -205,7 +205,8 @@ function options = set_options(varargin)
         % function evaluation
         options.num_objectives = 1;
         options.dimensions     = [];
-        
+        options.obj_columns    = false; % Function returns objectives as columns?
+
         % Differential Evolution
         options.DE.Flb        = -1.5;
         options.DE.Fub        = 1.5;
