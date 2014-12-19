@@ -744,7 +744,7 @@ classdef pop_single < handle
 
         end % function 
 
-        function evaluate_function(pop)
+        function evaluate_function2(pop)
           
         end % function
           
