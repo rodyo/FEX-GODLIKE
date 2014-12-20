@@ -266,6 +266,10 @@ classdef pop_multi < pop_single
                 %           or (rank(xj) == rank(yj) and distance(xj) > distance(yj)
                 ranks     = pop.pop_data.front_number(inds);
                 distances = pop.pop_data.crowding_distance(inds);
+                best = inds(1);         
+                % As default
+                % TODO: this should be calculated as a ranking, so that there is
+                % always a solution.
                 for j = 1:tournament_size                    
                     % compare ranks
                     less_rank = ranks(j) < [ranks(1:j-1); ranks(j+1:end)];                                       
