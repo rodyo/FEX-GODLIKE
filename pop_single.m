@@ -712,20 +712,30 @@ classdef pop_single < handle
             if isempty(pop.pop_data.function_values_offspring)
                 sites = 1:pop.size; % only in pop-initialization
             else
+                % TODO: check if this works correctly; set as logicals
+                % here, but used as index below
                 sites = ~isfinite(pop.pop_data.function_values_offspring(:, 1));
             end
             num_pop = nnz(sites);
             
-            % evaluate all functions for each population member
-            % TODO: another with parfor
-            for pop_num=1:num_pop
-              evaluate_one_function(pop, sites, pop_num);
+            % evaluate all functions for each population member in
+            % parallel or in serial
+            fvs = pop.pop_data.offspring_population(sites, :);
+            if pop.options.UseParallel
+              parfor pop_num=1:num_pop
+                evaluate_one_function(pop, sites, pop_num);
+              end
+            else
+              for pop_num=1:num_pop
+                evaluate_one_function(pop, sites, pop_num);
+              end
             end
                           
             % update number of function evaluations
-            % TODO: correct this if columns are returned
+            % (count each function call as one even though it returns
+            % multiple objectives)
             pop.funevals = pop.funevals + ...
-                num_pop*size(pop.pop_data.function_values_offspring, 2);%#ok
+                num_pop*numel(pop.funfcn); 
 
         end % function 
 
