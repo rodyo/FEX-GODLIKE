@@ -714,37 +714,36 @@ classdef pop_single < handle
             else
                 sites = ~isfinite(pop.pop_data.function_values_offspring(:, 1));
             end
+            num_pop = nnz(sites);
             
-            % first convert population to cell
-            true_pop = reshape(pop.pop_data.offspring_population(sites, :).', ...
-                [pop.orig_size,nnz(sites)]); 
-            % NOTE: for-loop is faster than MAT2CELL
-            cell_pop = cell(1,1,nnz(sites));
-            for ii = 1:size(true_pop,3), cell_pop{1,1,ii} = true_pop(:,:,ii); end %#ok
-            
-            % then evaluate all functions with cellfun
-            if pop.options.obj_columns
-              % if multi-objectives returned as column vector by single
-              % function, cellfun doesn't work directly - CG
-              pop.pop_data.function_values_offspring(sites, :) = ...
-                  permute(cell2mat(cellfun(pop.funfcn{1}, cell_pop, ...
-                                  'UniformOutput', false)), [3 2 1]);
-            else
-              % otherwise use cellfun directly - CG
-              % TODO: without preallocation, this will be slow
-              for ii = 1:numel(pop.funfcn)
-                pop.pop_data.function_values_offspring(sites, ii) = ...
-                    cellfun(pop.funfcn{ii}, cell_pop);
-              end
+            % evaluate all functions for each population member
+            % TODO: another with parfor
+            for pop_num=1:num_pop
+              evaluate_one_function(pop, sites, pop_num);
             end
-            
+                          
             % update number of function evaluations
+            % TODO: correct this if columns are returned
             pop.funevals = pop.funevals + ...
-                nnz(sites)*size(pop.pop_data.function_values_offspring, 2);%#ok
+                num_pop*size(pop.pop_data.function_values_offspring, 2);%#ok
 
         end % function 
 
-        function evaluate_function2(pop)
+        function evaluate_one_function(pop, sites, pop_num)
+        % Evaluate a single iterations of function(s), so that this can be run in
+        % parallel.  
+
+          if pop.options.obj_columns
+            % TODO: without preallocation, this will be slow
+            pop.pop_data.function_values_offspring(sites(pop_num), :) = ...
+                feval(pop.funfcn{1}, ...
+                      pop.pop_data.offspring_population(sites(pop_num), :));
+          else
+              for ii = 1:numel(pop.funfcn)
+                pop.pop_data.function_values_offspring(sites(pop_num), ii) = ...
+                    feval(pop.funfcn{ii}, pop.pop_data.offspring_population(sites(pop_num), :));
+              end
+          end
           
         end % function
           
