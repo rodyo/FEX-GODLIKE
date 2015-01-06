@@ -85,7 +85,7 @@ function options = set_options(varargin)
 %   ======================================================================
 %   General Settings for Multi-Objective Optimization:
 %   ======================================================================
-%        SkipTest : If set to 'on', some initial tests that are performed on
+% SkipTest (Unused!) : If set to 'on', some initial tests that are performed on
 %                   the objective and constraint functions. These tests
 %                   automatically determine whether the function accepts
 %                   vectorized input or not, and how many objectives the
@@ -206,6 +206,7 @@ function options = set_options(varargin)
         options.TolX          = 1e-4;
         options.TolFun        = 1e-4;
         options.AchieveFunVal = inf;
+        options.UseParallel   = false;
         
         % function evaluation
         options.num_objectives = 1;
