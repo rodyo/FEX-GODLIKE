@@ -515,6 +515,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 if single && (numel(sol) > 1)
                   single = false; 
                   options.obj_columns = true;
+                  options.num_objectives = numel(sol);
                 end
                 
                 % it might happen that more than one function is provided, 
