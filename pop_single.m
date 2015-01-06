@@ -38,7 +38,10 @@ classdef pop_single < handle
         
         % constructor
         function pop = pop_single(varargin)
-            
+
+            % TODO: too much stuff is done in constructor. This messes stuff
+            % up for subclasses (e.g., pop_multi). Divide constructor?
+          
             % default check
             error(nargchk(2, 7, nargin));
             
@@ -706,52 +709,61 @@ classdef pop_single < handle
         % evaluate the objective function(s) correctly
         function evaluate_function(pop)
                    
-            % NOTE: suited for both single and multi-objective optimization
+            % multi-objective optimization overloads this function for
+            % some initialization, but returns here later.
             
             % find evaluation sites
             if isempty(pop.pop_data.function_values_offspring)
                 sites = 1:pop.size; % only in pop-initialization
+                fvs = zeros(length(sites), 1);  % Single-objective only
             else
                 % TODO: check if this works correctly; set as logicals
                 % here, but used as index below
                 sites = ~isfinite(pop.pop_data.function_values_offspring(:, 1));
+                fvs = zeros(nnz(sites), ...
+                            size(pop.pop_data.function_values_offspring, 2));
             end
             num_pop = nnz(sites);
-            
+
+            pop_inputs = ...
+              pop.pop_data.offspring_population(sites, :);
+
             % evaluate all functions for each population member in
             % parallel or in serial
-            fvs = pop.pop_data.offspring_population(sites, :);
             if pop.options.UseParallel
               parfor pop_num=1:num_pop
-                evaluate_one_function(pop, sites, pop_num);
+                fvs(pop_num, :) = ...
+                    evaluate_one_function(pop, pop_inputs(pop_num, :));
               end
             else
               for pop_num=1:num_pop
-                evaluate_one_function(pop, sites, pop_num);
+                fvs(pop_num, :) = ...
+                    evaluate_one_function(pop, pop_inputs(pop_num, :));
               end
             end
+            pop.pop_data.function_values_offspring(sites, :) = fvs;
                           
             % update number of function evaluations
             % (count each function call as one even though it returns
             % multiple objectives)
-            pop.funevals = pop.funevals + ...
-                num_pop*numel(pop.funfcn); 
+            pop.funevals = pop.funevals + num_pop*numel(pop.funfcn); 
 
         end % function 
 
-        function evaluate_one_function(pop, sites, pop_num)
         % Evaluate a single iterations of function(s), so that this can be run in
         % parallel.  
-
+        function pop_output = evaluate_one_function(pop, pop_input)
+        
+          % TODO: move this to pop_multi and keep a simpler one here. Test
+          % with demo.
+            
           if pop.options.obj_columns
-            % TODO: without preallocation, this will be slow
-            pop.pop_data.function_values_offspring(sites(pop_num), :) = ...
-                feval(pop.funfcn{1}, ...
-                      pop.pop_data.offspring_population(sites(pop_num), :));
+            pop_output = ...
+                feval(pop.funfcn{1}, pop_input);
           else
               for ii = 1:numel(pop.funfcn)
-                pop.pop_data.function_values_offspring(sites(pop_num), ii) = ...
-                    feval(pop.funfcn{ii}, pop.pop_data.offspring_population(sites(pop_num), :));
+                pop_output(1, ii) = ...
+                    feval(pop.funfcn{ii}, pop_input);
               end
           end
           
