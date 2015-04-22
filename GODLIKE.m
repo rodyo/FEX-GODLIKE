@@ -371,7 +371,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
                 options.GODLIKE.ItersLb = u_b;
             end
-            if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
+            if (options.GODLIKE.MinIters > options.GODLIKE.MaxIters)
                 warning('GODLIKE:MaxIters_exceeds_MinIters',...
                     ['Value of options.MinIters is larger than value of\n',...
                     'options.MaxIters. Values will simply be swapped.']);
