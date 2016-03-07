@@ -54,7 +54,9 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
 %
 %   popsize     positive integer. Indicates the TOTAL population 
 %               size, that is, the number of individuals of all 
-%               populations combined. 
+%               populations combined. If an array, indicates exactly
+%               the population size of each algorithm specified in
+%               which_ones below.
 %
 %   lb, ub      The lower and upper bounds of the problem's search
 %               space, for each dimension. May be scalar in case all
@@ -159,8 +161,15 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
     % GODLIKE loop
     while ~converged
         
-        % randomize population sizes (minimum is 5 individuals)
-        frac_popsize = break_value(popsize, 5);
+        % popsize may already give us the divisions into algorithms
+        if length(popsize) == algorithms
+          frac_popsize = popsize;
+          total_popsize = sum(popsize);
+        else
+          % randomize population sizes (minimum is 5 individuals)
+          frac_popsize = break_value(popsize, 5);
+          total_popsize = popsize;
+        end
         
         % randomize number of iterations per algorithm
         % ([options.GODLIKE.ItersUb] is the maximum TOTAL amount 
@@ -352,12 +361,14 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 error('GODLIKE:lb_larger_than_ub',...
                     'All entries in [lb] must be smaller than the corresponding entries in [ub].')
             end
-            if ~isscalar(popsize) || ~isreal(popsize) || ~isfinite(popsize) || popsize < 0
+            if ~isreal(popsize) || ~isfinite(popsize) || popsize < 0
                 error('GODLIKE:popsize_is_bad',...
-                    'Argument [popsize] must be a real, positive and finite scalar.')
+                    ['Argument [popsize] must be a real, positive and ' ...
+                     'finite scalar or array whose size equal to the ' ...
+                     'number of selected algorithms.'])
             end
         else % i.e., nargin ~= 0
-            if (5*numel(which_ones) > popsize)
+            if (5*numel(which_ones) > sum(popsize) || min(popsize) < 5)
                 error('GOLIKE:popsize_too_small',...
                     ['Each algorithm requires a population size of at least 5.\n',...
                     'Given value for [popsize] makes this impossible. Increase\n',...
@@ -606,10 +617,10 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         if (algorithms == 1), return, end
         
         % initialize
-        parent_pops = zeros(popsize, dimensions);              offspring_pops = parent_pops; 
-        parent_fits = zeros(popsize, options.num_objectives);  offspring_fits = parent_fits;               
+        parent_pops = zeros(total_popsize, dimensions);              offspring_pops = parent_pops; 
+        parent_fits = zeros(total_popsize, options.num_objectives);  offspring_fits = parent_fits;               
         if multi
-            front_numbers = zeros(popsize, 1);  
+            front_numbers = zeros(total_popsize, 1);  
             crowding_size = 0;
             for ii = 1:algorithms
               if (pop{ii}.iterations == 1)
@@ -655,7 +666,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         end % for
         
         % shuffle everything at random
-        [dummy, rndinds] = sort(rand(popsize, 1));
+        [dummy, rndinds] = sort(rand(total_popsize, 1));
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);  
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
         if multi
@@ -999,7 +1010,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                            ['Total population size is %d individuals. Lower bounds on\n',...
                             'algorithm iterations is %d, upper bound is %d. Generations\n', ...
                             'lower bound is %d, upper bound is %d.\n'], ...
-                            popsize, options.GODLIKE.ItersLb, ...
+                            total_popsize, options.GODLIKE.ItersLb, ...
                             options.GODLIKE.ItersUb, options.MinIters, ...
                             options.MaxIters);
                 end % if
