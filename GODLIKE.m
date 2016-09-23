@@ -54,7 +54,9 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
 %
 %   popsize     positive integer. Indicates the TOTAL population 
 %               size, that is, the number of individuals of all 
-%               populations combined. 
+%               populations combined. If an array, indicates exactly
+%               the population size of each algorithm specified in
+%               which_ones below.
 %
 %   lb, ub      The lower and upper bounds of the problem's search
 %               space, for each dimension. May be scalar in case all
@@ -163,8 +165,15 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
     % GODLIKE loop
     while ~converged
         
-        % randomize population sizes (minimum is 5 individuals)
-        frac_popsize = break_value(popsize, 5);
+        % popsize may already give us the divisions into algorithms
+        if length(popsize) == algorithms
+          frac_popsize = popsize;
+          total_popsize = sum(popsize);
+        else
+          % randomize population sizes (minimum is 5 individuals)
+          frac_popsize = break_value(popsize, 5);
+          total_popsize = popsize;
+        end
         
         % randomize number of iterations per algorithm
         % ([options.GODLIKE.ItersUb] is the maximum TOTAL amount 
@@ -356,12 +365,14 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 error('GODLIKE:lb_larger_than_ub',...
                     'All entries in [lb] must be smaller than the corresponding entries in [ub].')
             end
-            if ~isscalar(popsize) || ~isreal(popsize) || ~isfinite(popsize) || popsize < 0
+            if ~all(isreal(popsize)) || ~all(isfinite(popsize)) || all(popsize < 0)
                 error('GODLIKE:popsize_is_bad',...
-                    'Argument [popsize] must be a real, positive and finite scalar.')
+                    ['Argument [popsize] must be a real, positive and ' ...
+                     'finite scalar or array whose size equal to the ' ...
+                     'number of selected algorithms.'])
             end
-        else
-            if (5*numel(which_ones) > popsize)
+        else % i.e., nargin ~= 0
+            if (5*numel(which_ones) > sum(popsize) || min(popsize) < 5)
                 error('GOLIKE:popsize_too_small',...
                     ['Each algorithm requires a population size of at least 5.\n',...
                     'Given value for [popsize] makes this impossible. Increase\n',...
@@ -375,7 +386,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
                 options.GODLIKE.ItersLb = u_b;
             end
-            if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
+            if (options.MinIters > options.MaxIters)
                 warning('GODLIKE:MaxIters_exceeds_MinIters',...
                     ['Value of options.MinIters is larger than value of\n',...
                     'options.MaxIters. Values will simply be swapped.']);
@@ -516,7 +527,11 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 fevals = fevals + 1;
                 
                 % see whether single must be changed to multi
-                if single && (numel(sol) > 1), single = false; end
+                if single && (numel(sol) > 1)
+                  single = false; 
+                  options.obj_columns = true;
+                  options.num_objectives = numel(sol);
+                end
                 
                 % it might happen that more than one function is provided, 
                 % but that one of the functions returns more than one function 
@@ -606,11 +621,20 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         if (algorithms == 1), return, end
         
         % initialize
-        parent_pops = zeros(popsize, dimensions);              offspring_pops = parent_pops; 
-        parent_fits = zeros(popsize, options.num_objectives);  offspring_fits = parent_fits;               
+        parent_pops = zeros(total_popsize, dimensions);              offspring_pops = parent_pops; 
+        parent_fits = zeros(total_popsize, options.num_objectives);  offspring_fits = parent_fits;               
         if multi
-            front_numbers      = zeros(popsize, 1);  
-            crowding_distances = [front_numbers;front_numbers];    
+            front_numbers = zeros(total_popsize, 1);  
+            crowding_size = 0;
+            for ii = 1:algorithms
+              if (pop{ii}.iterations == 1)
+                % only one set after 1st generation
+                crowding_size = crowding_size + pop{ii}.size;    
+              else
+                crowding_size = crowding_size + 2 * pop{ii}.size;    
+              end
+              crowding_distances = zeros(crowding_size, 1);    
+            end
         end
         lfe1 = 0;   lfe2 = 0;    % Last Filled Entry (lfe)
         
@@ -630,20 +654,27 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
             % stuff specific for multi-objective optimization
             if multi
                 front_numbers(lfe1+1:lfe1+popsz, :)        = popinfo.front_number;
-                crowding_distances(lfe2+1:lfe2+2*popsz, :) = popinfo.crowding_distance;
+                if (pop{ii}.iterations == 1)
+                  multisize = popsz;
+                else
+                  multisize = 2*popsz; 
+                end
+                crowding_distances(lfe2+1:lfe2+multisize, :) = ...
+                      popinfo.crowding_distance;
+                lfe2 = lfe2 + multisize;
             end
             
             % update indices
-            lfe1 = lfe1 + popsz;  lfe2 = lfe2 + 2*popsz;
+            lfe1 = lfe1 + popsz;  
             
         end % for
         
         % shuffle everything at random
-        [dummy, rndinds] = sort(rand(popsize, 1));
+        [dummy, rndinds] = sort(rand(total_popsize, 1));
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);  
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
         if multi
-            [dummy, rndinds2]  = sort(rand(2*popsize, 1));
+            [dummy, rndinds2]  = sort(rand(crowding_size, 1));
             front_numbers      = front_numbers(rndinds,:);            
             crowding_distances = crowding_distances(rndinds2,:);
         end        
@@ -973,17 +1004,19 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     % population size, iterations low and high
                     if     single
                         fprintf(1,...
-                           ['Performing single-objective optimization, with total population\n'...
-                            'size of %d individuals. Lower bounds on algorithm iterations\n', ...
-                            'is %d, upper bound is %d.\n'], popsize, options.GODLIKE.ItersLb, ...
-                            options.GODLIKE.ItersUb);
+                           ['Performing single-objective optimization.\n']);
                     elseif multi
                         fprintf(1,...                            
-                           ['Performing multi-objective optimization, with %d objectives.\n',...
-                            'Total population size is %d individuals. Lower bounds on\nalgorithm ',...
-                            'iterations is %d, upper bound is %d.\n'], options.num_objectives,...
-                            popsize, options.GODLIKE.ItersLb, options.GODLIKE.ItersUb);
+                           ['Performing multi-objective optimization, ' ...
+                            'with %d objectives.\n'], options.num_objectives);
                     end % if
+                    fprintf(1,...                            
+                           ['Total population size is %d individuals. Lower bounds on\n',...
+                            'algorithm iterations is %d, upper bound is %d. Generations\n', ...
+                            'lower bound is %d, upper bound is %d.\n'], ...
+                            total_popsize, options.GODLIKE.ItersLb, ...
+                            options.GODLIKE.ItersUb, options.MinIters, ...
+                            options.MaxIters);
                 end % if
                 
                 % subsequent iterations

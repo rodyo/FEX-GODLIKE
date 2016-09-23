@@ -268,6 +268,10 @@ classdef pop_multi < pop_single
                 %           or (rank(xj) == rank(yj) and distance(xj) > distance(yj)
                 ranks     = pop.pop_data.front_number(inds);
                 distances = pop.pop_data.crowding_distance(inds);
+                best = inds(1);         
+                % As default
+                % TODO: this should be calculated as a ranking, so that there is
+                % always a solution.
                 for j = 1:tournament_size                    
                     % compare ranks
                     less_rank = ranks(j) < [ranks(1:j-1); ranks(j+1:end)];                                       
@@ -423,7 +427,27 @@ classdef pop_multi < pop_single
                                                             
             end % switch            
         end % method (update_algorithms)
-        
+
+        % overload from pop_single
+        function evaluate_function(pop)
+
+            % ugly hack because of pop_single constructor running
+            % evaluations before pop_multi construction is complete
+            if isempty(pop.num_objectives)
+              num_objectives = pop.options.num_objectives;
+            else
+              num_objectives = pop.num_objectives;
+            end
+          
+            if isempty(pop.pop_data.function_values_offspring)
+              pop.pop_data.function_values_offspring = ...
+                  NaN(pop.size, num_objectives);
+            end
+
+            % call super
+            evaluate_function@pop_single(pop);
+        end
+
     end % protected/hidden methods 
     
 end % classdef

@@ -40,6 +40,11 @@ function options = set_options(varargin)
 %                 fronts), while a Pareto front of much better quality is 
 %                 obtained if some additional shuffles are performed. The
 %                 default value is 2. 
+%   UseParallel : logical, either false (default), or true. If on, it
+%   		   will use run function evaluations within each
+%   		   generation in parallel. It uses Matlab's native parfor
+%   		   keyword for this, utilizing the current parallel
+%   		   execution pool (see parfor for more).
 %
 %   ======================================================================
 %   Options specific to the GODLIKE Algorithm:
@@ -80,7 +85,7 @@ function options = set_options(varargin)
 %   ======================================================================
 %   General Settings for Multi-Objective Optimization:
 %   ======================================================================
-%        SkipTest : If set to 'on', some initial tests that are performed on
+% SkipTest (Unused!) : If set to 'on', some initial tests that are performed on
 %                   the objective and constraint functions. These tests
 %                   automatically determine whether the function accepts
 %                   vectorized input or not, and how many objectives the
@@ -214,11 +219,13 @@ function options = set_options(varargin)
         options.TolX          = 1e-4;
         options.TolFun        = 1e-4;
         options.AchieveFunVal = inf;
+        options.UseParallel   = false;
         
         % function evaluation
         options.num_objectives = 1;
         options.dimensions     = [];
-        
+        options.obj_columns    = false; % Function returns objectives as columns?
+
         % Differential Evolution
         options.DE.Flb        = -1.5;
         options.DE.Fub        = 1.5;
@@ -331,6 +338,15 @@ function options = set_options(varargin)
                     continue;
                 end
                 options.AchieveFunVal = value;            
+            elseif strcmpi(option, 'UseParallel')
+                if isnumeric(value)
+                  value = (value ~= 0); % convert to logical
+                end
+                if ~islogical(value)
+                    throwwarning('UseParallel', 'logical', value);
+                    continue;
+                end                
+                options.UseParallel = value; 
                 
             % options specific to Differential Evolution
             elseif strcmpi(option, 'Flb')
