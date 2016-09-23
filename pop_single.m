@@ -1,15 +1,20 @@
 classdef pop_single < handle
 % =insert documentation here=
 
-%      Author : Rody P.S. Oldenhuis
-% Affiliation : Delft University of Technology
-%               Faculty of Aerospace Engineering
-%               Dep. of Astrodynamics & Satellite Systems 
-%     Contact : oldnhuis@dds.nl
-%   Licensing/
-%    (C) info : Frankly I don't care what you do with it, 
-%               as long as I get some credit when you copy 
-%               large portions of the code ^_^
+
+% Please report bugs and inquiries to:
+%
+% Name       : Rody P.S. Oldenhuis
+% E-mail     : oldenhuis@gmail.com    (personal)
+%              oldenhuis@luxspace.lu  (professional)
+% Affiliation: LuxSpace s�rl
+% Licence    : BSD
+
+
+% If you find this work useful, please consider a donation:
+% https://www.paypal.me/RodyO/3.5
+
+
     
     % all properties are public
     properties 

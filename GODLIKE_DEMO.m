@@ -4,6 +4,21 @@ function GODLIKE_DEMO
 % type 'GODLIKE_DEMO' to run a demonstration of the 
 % GODLIKE algorithm. 
 
+
+% Please report bugs and inquiries to:
+%
+% Name       : Rody P.S. Oldenhuis
+% E-mail     : oldenhuis@gmail.com    (personal)
+%              oldenhuis@luxspace.lu  (professional)
+% Affiliation: LuxSpace s�rl
+% Licence    : BSD
+
+
+% If you find this work useful, please consider a donation:
+% https://www.paypal.me/RodyO/3.5
+
+
+
     % initialize
     clc
     

@@ -184,7 +184,20 @@ function options = set_options(varargin)
 %
 % see also GODLIKE, pop_multi, pop_single.
     
-    % Last edited 30/Jul/2009
+
+% Please report bugs and inquiries to:
+%
+% Name       : Rody P.S. Oldenhuis
+% E-mail     : oldenhuis@gmail.com    (personal)
+%              oldenhuis@luxspace.lu  (professional)
+% Affiliation: LuxSpace s�rl
+% Licence    : BSD
+
+
+% If you find this work useful, please consider a donation:
+% https://www.paypal.me/RodyO/3.5
+
+
     
     % create structure with default values if no input is given
     if (nargin == 0)

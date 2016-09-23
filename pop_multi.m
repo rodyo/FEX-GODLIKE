@@ -45,17 +45,19 @@ classdef pop_multi < pop_single
 %
 % See also pop_single, GODLIKE. 
 
-%      Author : Rody P.S. Oldenhuis
-% Affiliation : Delft University of Technology
-%               Faculty of Aerospace Engineering
-%               Dep. of Astrodynamics & Satellite Systems 
-%     Contact : oldnhuis@dds.nl
-%   Licensing/
-%    (C) info : Frankly I don't care what you do with it, 
-%               as long as I get some credit when you copy 
-%               large portions of the code ^_^
 
-% last edited 28/07/2009
+% Please report bugs and inquiries to:
+%
+% Name       : Rody P.S. Oldenhuis
+% E-mail     : oldenhuis@gmail.com    (personal)
+%              oldenhuis@luxspace.lu  (professional)
+% Affiliation: LuxSpace s�rl
+% Licence    : BSD
+
+
+% If you find this work useful, please consider a donation:
+% https://www.paypal.me/RodyO/3.5
+
     
     % additional properties are also public
     properties

@@ -113,15 +113,19 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
 %   See also pop_single, pop_multi, set_options. 
 
 
-%      Author : Rody P.S. Oldenhuis
-% Affiliation : Delft University of Technology
-%               Faculty of Aerospace Engineering
-%               Dep. of Astrodynamics & Satellite Systems 
-%     Contact : oldenhuis@dds.nl
-%   Licensing/
-%    (C) info : Frankly I don't care what you do with it, 
-%               as long as I get some credit when you copy 
-%               large portions of the code ^_^
+% Please report bugs and inquiries to:
+%
+% Name       : Rody P.S. Oldenhuis
+% E-mail     : oldenhuis@gmail.com    (personal)
+%              oldenhuis@luxspace.lu  (professional)
+% Affiliation: LuxSpace s�rl
+% Licence    : BSD
+
+
+% If you find this work useful, please consider a donation:
+% https://www.paypal.me/RodyO/3.5
+
+
     
     %% Initialize
        
