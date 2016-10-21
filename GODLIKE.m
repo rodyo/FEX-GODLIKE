@@ -130,7 +130,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
     %% Initialize
        
     % basic check on input
-    error(nargchk(4, inf, nargin));
+    error(nargchk(4, inf, nargin, 'struct'));
     
     % more elaborate check on input (nested function)
     check_input;
@@ -203,7 +203,8 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     % we have to do a loop through all of them.
                     funevaluations = 0;
                     for k = 1:algorithms
-                        if ~isempty(pop{k}),funevaluations=funevaluations+pop{k}.funevals;end
+                        if ~isempty(pop{k})
+                            funevaluations=funevaluations+pop{k}.funevals; end
                     end % for
                     num_funevaluations = test_evaluations + funevaluations;
                     
@@ -211,14 +212,18 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     if multi
                         % all are non-dominated, first display progress, then exit the loop
                         if all(pop{i}.pop_data.front_number == 0)
-                            if ~isempty(options.display), display_progress; end, break
+                            if ~isempty(options.display)
+                                display_progress; end
+                            break;
                         end
                     elseif single
                         % check algorithm convergence
                         [alg_converged, output, counter] = check_convergence(false,output,counter);
                         % if converged, first display progress, then exit the loop
                         if alg_converged
-                            if ~isempty(options.display), display_progress; end, break
+                            if ~isempty(options.display)
+                                display_progress; end
+                            break;
                         end
                     end % if
                     
@@ -226,19 +231,23 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     % surpasses the preset maximum
                     if (num_funevaluations >= options.MaxFunEvals)
                         % also display last iteration
-                        if ~isempty(options.display), display_progress; end,
-                        converged = true; break,
+                        if ~isempty(options.display)
+                            display_progress; end,
+                        converged = true;
+                        break,
                     end
                     
                     % display progress at every iteration
-                    if ~isempty(options.display), display_progress; end
+                    if ~isempty(options.display)
+                        display_progress; end
                     
                 end % algorithm loop
             end
             
             % if we have convergence inside the algorithm 
             % loop, break the main loop
-            if converged, break, end
+            if converged
+                break; end
             
         end % main loop
                 
@@ -246,7 +255,8 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         generation = generation + 1;
         
         % check maximum iterations
-        if (generation >= options.MaxIters), converged = true; end        
+        if (generation >= options.MaxIters)
+            converged = true; end        
         
         % check for convergence (and update output structure)
         [converged, output] = check_convergence(converged, output);
@@ -254,20 +264,28 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
     end % GODLIKE loop
     
     % display final results
-    if ~isempty(options.display), display_progress; end
+    if ~isempty(options.display)
+        display_progress; end
     
     %% output values
     
     % multi-objective optimization
-    if multi  
+    if multi 
+        
         varargout{1} = output.most_efficient_point;
         varargout{2} = output.most_efficient_fitnesses;
         varargout{3} = output.pareto_front_individuals;
         varargout{4} = output.pareto_front_fitnesses;
         varargout{5} = output.exitflag;
         % remove some fields from output structure
-        output = rmfield(output, {'pareto_front_individuals','pareto_front_fitnesses',...
-            'exitflag','most_efficient_point','most_efficient_fitnesses'});
+        output = rmfield(output, {...
+                         'pareto_front_individuals'
+                         'pareto_front_fitnesses'
+                         'exitflag'
+                         'most_efficient_point'
+                         'most_efficient_fitnesses'
+                         });
+                     
         % and output what's left
         varargout{6} = output;
         
@@ -279,6 +297,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
             varargout{1} = output.global_best_individual;
             varargout{2} = output.global_best_funval;
             varargout{3} = output.exitflag;
+            
             % remove some fields from output structure
             outpt.algorithms = output.algorithms;   outpt.funcCount = output.funcCount;
             outpt.message    = output.message;      outpt.algorithm_info = output.algorithm_info;
@@ -292,12 +311,19 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
             varargout{2} = NaN;
             varargout{3} = -3;
             % remove some fields from output structure
-            output = rmfield(output, {'global_best_funval', 'exitflag','descent_counter',...
-                'best_individuals','best_funcvalues','previous_global_best_funval',...
-                'previous_best_funcvalues'});
+            output = rmfield(output, {...
+                             'global_best_funval'
+                             'exitflag'
+                             'descent_counter'                             
+                             'best_individuals'
+                             'best_funcvalues'
+                             'previous_global_best_funval'
+                             'previous_best_funcvalues'
+                             });
+                         
             % adjust message
             output.message = sprintf('%s\n\n All function values encountered were INF or NaN.\n',...
-                output.message);            
+                                     output.message);            
             % output 
             varargout{4} = output;
         end
@@ -314,24 +340,24 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         if (nargin == 0)
             if isempty(funfcn)
                 error('GODLIKE:function_not_defined',...
-                    'GODLIKE requires at least one objective function.');
+                      'GODLIKE requires at least one objective function.');
             end
             if isempty(lb)||isempty(ub)||isempty(popsize)
                 error('GODLIKE:lbubpopsize_not_defined',...
-                    'GODLIKE requires arguments [lb], [ub] and [popsize].');
+                      'GODLIKE requires arguments [lb], [ub] and [popsize].');
             end
             if ~isnumeric(lb)||~isnumeric(ub)||~isnumeric(popsize)
                 error('GODLIKE:lbubpopsize_not_numeric',...
-                    'Arguments [lb], [ub] and [popsize] must be numeric.');
+                      'Arguments [lb], [ub] and [popsize] must be numeric.');
             end
             if any(~isfinite(lb)) || any(~isfinite(ub)) || ...
                     any(  ~isreal(lb)) || any(~isreal(ub))
                 error('GODLIKE:lbub_not_finite',...
-                    'Values for [lb] and [ub] must be real and finite.');
+                      'Values for [lb] and [ub] must be real and finite.');
             end
             if ~isvector(lb) || ~isvector(ub)
                 error('GODLIKE:lbub_mustbe_vector',...
-                    'Arguments [lb] and [ub] must be given as vectors.');
+                      'Arguments [lb] and [ub] must be given as vectors.');
             end
             if ~isa(funfcn, 'function_handle')                
                 % might be cell array
@@ -339,70 +365,70 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     for ii = 1:numel(funfcn)
                         if ~isa(funfcn{ii}, 'function_handle')
                             error('GODLIKE:funfcn_mustbe_function_handle',...
-                                'All objective functions must be function handles.');
+                                  'All objective functions must be function handles.');
                         end
                     end                    
                 % otherwise, must be function handle
                 else
                     error('GODLIKE:funfcn_mustbe_function_handle',...
-                        'Objective function must be given as a function handle.');
+                          'Objective function must be given as a function handle.');
                 end
             end
             if (nargin == 6) && ~isstruct(varargin{2})
                 error('GODLIKE:options_mustbe_structure',...
-                    'Argument [options] must be a structure.')
+                      'Argument [options] must be a structure.')
             end
             if any(lb > ub)
                 error('GODLIKE:lb_larger_than_ub',...
-                    'All entries in [lb] must be smaller than the corresponding entries in [ub].')
+                      'All entries in [lb] must be smaller than the corresponding entries in [ub].')
             end
             if ~isscalar(popsize) || ~isreal(popsize) || ~isfinite(popsize) || popsize < 0
                 error('GODLIKE:popsize_is_bad',...
-                    'Argument [popsize] must be a real, positive and finite scalar.')
+                      'Argument [popsize] must be a real, positive and finite scalar.')
             end
         else
             if (5*numel(which_ones) > popsize)
                 error('GOLIKE:popsize_too_small',...
-                    ['Each algorithm requires a population size of at least 5.\n',...
-                    'Given value for [popsize] makes this impossible. Increase\n',...
-                    'argument [popsize] to at least ', num2str(5*numel(which_ones)), '.']);
+                      ['Each algorithm requires a population size of at least 5.\n',...
+                      'Given value for [popsize] makes this impossible. Increase\n',...
+                      'argument [popsize] to at least ', num2str(5*numel(which_ones)), '.']);
             end
             if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
                 warning('GODLIKE:ItersLb_exceeds_ItersUb',...
-                    ['Value of options.GODLIKE.ItersLb is larger than value of\n',...
-                    'options.GODLIKE.ItersUb. Values will simply be swapped.']);
+                        ['Value of options.GODLIKE.ItersLb is larger than value of\n',...
+                        'options.GODLIKE.ItersUb. Values will simply be swapped.']);
                 u_b = options.GODLIKE.ItersUb;
                 options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
                 options.GODLIKE.ItersLb = u_b;
             end
             if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
                 warning('GODLIKE:MaxIters_exceeds_MinIters',...
-                    ['Value of options.MinIters is larger than value of\n',...
-                    'options.MaxIters. Values will simply be swapped.']);
+                        ['Value of options.MinIters is larger than value of\n',...
+                        'options.MaxIters. Values will simply be swapped.']);
                 u_b = options.MaxIters;
                 options.MaxIters = options.MinIters;
                 options.MinIters = u_b;
             end
             if single
                 % single objective optimization has a maximum of 4 output arguments
-                error(nargoutchk(0, 4, varargin{1}))
+                error(nargoutchk(0, 4, varargin{1}, 'struct'));
             elseif multi
                 % multi-objective optimization has a maximum of 6 output arguments
-                error(nargoutchk(0, 6, varargin{1}))
+                error(nargoutchk(0, 6, varargin{1}, 'struct'));
             end
             if strcmpi(options.display, 'plot') && single && dimensions > 2
                 warning('GODLIKE:Plotting_not_possible',...
-                    ['Display type was set to ''Plot'', but the number of\n',...
-                    'decision variables exceeds 2. The search space can note be\n',...
-                    'displayed. Set options.display to ''off'' or ''on'' to \n',...
-                    '''on'' to supress this message.'])
+                        ['Display type was set to ''Plot'', but the number of\n',...
+                        'decision variables exceeds 2. The search space can note be\n',...
+                        'displayed. Set options.display to ''off'' or ''on'' to \n',...
+                        '''on'' to supress this message.'])
             end
             if strcmpi(options.display, 'plot') && multi && options.num_objectives > 3
                 warning('GODLIKE:Plotting_not_possible',...
-                    ['Display type was set to ''Plot'', but the number of\n',...
-                    'objective functions exceeds 3. The Pareto front can \n',...
-                    'not be displayed. Set options.display to ''off'' or \n',...
-                    '''on'' to supress this message.'])
+                        ['Display type was set to ''Plot'', but the number of\n',...
+                        'objective functions exceeds 3. The Pareto front can \n',...
+                        'not be displayed. Set options.display to ''off'' or \n',...
+                        '''on'' to supress this message.'])
             end
         end % if        
     end % nested function
@@ -450,10 +476,15 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                                                      
         % save the original size of [lb] or [ub]        
         max_elements = max(numel(lb),numel(ub));
-        if (max_elements == numel(lb)), sze = size(lb); else  sze = size(ub); end        
+        if (max_elements == numel(lb))
+            sze = size(lb); 
+        else
+            sze = size(ub); 
+        end
                                                      
         % force [lb] and [ub] to be row vectors
-        lb = lb(:).';  ub = ub(:).';        
+        lb = lb(:).';  
+        ub = ub(:).';        
         
         % replicate one or the other when their sizes are not equal
         if ~all(size(lb) == size(ub))
@@ -523,18 +554,18 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                 % value. GODLIKE cannot handle that case
                 if (numel(sol) > 1) && (ii > 1)
                     error('GODLIKE:multimulti_not_allowed',...
-                        ['GODLIKE cannot optimize multiple multi-objective problems ',...
-                        'simultaneously.\nUse GODLIKE multiple times on each of your objective ',...
-                        'functions separately.\n\nThis error is generated because the first of ',...
-                        'your objective functions returned\nmultiple values, while ',...
-                        'you provided multiple objective functions. Only one of\nthese formats ',...
-                        'can be used for multi-objective optimization, not both.'])                        
+                          ['GODLIKE cannot optimize multiple multi-objective problems ',...
+                          'simultaneously.\nUse GODLIKE multiple times on each of your objective ',...
+                          'functions separately.\n\nThis error is generated because the first of ',...
+                          'your objective functions returned\nmultiple values, while ',...
+                          'you provided multiple objective functions. Only one of\nthese formats ',...
+                          'can be used for multi-objective optimization, not both.'])                        
                 end
                 
             % if evaluating the function fails, throw error
             catch userFcn_ME                                
                 pop_ME = MException('GODLIKE:function_doesnt_evaluate',...
-                    'GODLIKE cannot continue: failure during function evaluation.');
+                                    'GODLIKE cannot continue: failure during function evaluation.');
                 userFcn_ME = addCause(userFcn_ME, pop_ME);
                 rethrow(userFcn_ME);
             end % try/catch  
@@ -557,7 +588,10 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         % The GODLIKE arguments [lb] or [ub] may get overwritten!
                 
         % only one algorithm - just return value
-        if algorithms == 1, frac_value = value; return; end
+        if algorithms == 1
+            frac_value = value;
+            return; 
+        end
         
         % initially, the upper bound is the value minus
         % (algorithms-1) times the lower bound
@@ -568,8 +602,11 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         frac_value = zeros(algorithms, 1);
         for ii = 1:algorithms-1 % note the minus one           
             % random value (make sure it's not zero)
-            rnd = 0; while (rnd == 0), rnd = round(rand*(Ub-Lb) + Lb); end
-            frac_value(ii) = rnd;            
+            rnd = 0; 
+            while (rnd == 0)
+                rnd = round(rand*(Ub-Lb) + Lb); end
+            frac_value(ii) = rnd;  
+            
             % adjust max. value for next iteration
             Ub = round((value - sum(frac_value))/(algorithms-ii));            
         end % for
@@ -578,7 +615,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         frac_value(end) = value - sum(frac_value);
         
         % sort at random
-        [dummy, inds] = sort(rand(size(frac_value,1),1));
+        [dummy, inds] = sort(rand(size(frac_value,1),1)); %#ok<ASGLU>
         frac_value = frac_value(inds);
         
     end % nested function
@@ -639,11 +676,11 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
         end % for
         
         % shuffle everything at random
-        [dummy, rndinds] = sort(rand(popsize, 1));
+        [dummy, rndinds] = sort(rand(popsize, 1));%#ok<ASGLU>
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);  
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
         if multi
-            [dummy, rndinds2]  = sort(rand(2*popsize, 1));
+            [dummy, rndinds2]  = sort(rand(2*popsize, 1));%#ok<ASGLU>
             front_numbers      = front_numbers(rndinds,:);            
             crowding_distances = crowding_distances(rndinds2,:);
         end        
@@ -908,7 +945,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                      shifted_fitnesses   = bsxfun(@minus, ...
                          output.pareto_front_fitnesses, origin);
                      distances_sq        = sum(shifted_fitnesses.^2,2);
-                     [mindist_sq, index] = min(distances_sq);
+                     [dummy, index]      = min(distances_sq);%#ok<ASGLU>
                      output.most_efficient_point     = output.pareto_front_individuals(index, :);
                      output.most_efficient_fitnesses = output.pareto_front_fitnesses(index, :);
                  end % if converged
@@ -919,16 +956,25 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
     % display the algorithm's progress   
     function display_progress
         
+        persistent function_outline  
+        persistent chopped_function_outline
+        persistent fighandle  
+        persistent plothandles        
+        persistent previous_legend_entries
+        persistent previous_generation
+        
         % if the algorithm is multistart, only print the header
                 
         % current loop indices
         loop_index = i;
         %TODO - display for MS
-        if ~strcmpi(pop{i}.algorithm, 'MS'), algorithm_index = j; end 
+        if ~strcmpi(pop{i}.algorithm, 'MS')
+            algorithm_index = j; end 
         
         % Command window
         % ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·          
-        if strcmpi(options.display, 'on') || strcmpi(options.display, 'CommandWindow')
+        if strcmpi(options.display, 'on') || ...
+                strcmpi(options.display, 'CommandWindow')
                        
             % if not converged, display all relevant information 
             % from the current iteration
@@ -939,9 +985,9 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     counter_string = 'th';
                 else
                     switch genstr(end)
-                        case '1', counter_string = 'st';
-                        case '2', counter_string = 'nd';
-                        case '3', counter_string = 'rd';
+                        case '1',  counter_string = 'st';
+                        case '2',  counter_string = 'nd';
+                        case '3',  counter_string = 'rd';
                         otherwise, counter_string = 'th';
                     end
                 end
@@ -1014,47 +1060,95 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     elseif single
                         fprintf(1, '  #  f.count       min(F)        std(F)         descent\n');
                     end % if
-                    fprintf(1, '· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·\n')
+                    fprintf(1, '· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·\n');
                 end % if
                 
                 if multi
                     fprintf(1, '%3d   %6d    %10d             %10d\n', ...
                         algorithm_index, pop{loop_index}.funevals, ...
                         nnz(pop{loop_index}.pop_data.front_number==0),...
-                        nnz(pop{loop_index}.pop_data.front_number~=0))
+                        nnz(pop{loop_index}.pop_data.front_number~=0));
                 elseif single
                     fprintf(1, '%3d   %6d    %+1.5e  %+1.5e  %+1.5e\n',...
                         algorithm_index, pop{loop_index}.funevals, ...
                         min(pop{loop_index}.fitnesses),std(pop{loop_index}.fitnesses),...
                         output.previous_best_funcvalues(loop_index) -...
-                        output.best_funcvalues(loop_index))
+                        output.best_funcvalues(loop_index));
                 end % if
          
             % if we do have convergence, just display the output message
             else
-                fprintf(1, '\n'), fprintf(1, output.message), fprintf(1, '\n\n'),
+                fprintf(1, '\n');
+                fprintf(1, output.message);
+                fprintf(1, '\n\n');
             end % if            
         end % if (commandwindow)
                 
         % Plot
         % ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  ·  
         if strcmpi(options.display, 'Plot') 
+            
+            legend_update_needed = false;
+            initial_draw         = false;
                                 
             % Check problem dimensionality (can not be larger than 2)
-            if single && pop{1}.dimensions > 2, return, end
+            if single && pop{1}.dimensions > 2
+                return, end
             
             % Check number of objectives (can not be larger than 3)
-            if ~single && pop{1}.num_objectives > 3, return, end
+            if ~single && pop{1}.num_objectives > 3
+                return, end
             
             % initialize some stuff
             % (maximum of 16 algorithms can be displayed)
-            clf, hold on, minfval = [];   
+            if isempty(fighandle) || ~ishandle(fighandle) 
+                
+                update_axes          = true;
+                initial_draw         = true;
+                legend_update_needed = true;
+                
+                fighandle = figure('renderer', 'opengl',...
+                                   'position', [450 150 1200 675]);
+                clf, hold on     
+                                
+                % Make rough outline of function 
+                if numel(pop{1}.funfcn) == 1
+                    inds = pop{1}.individuals;
+                    if size(inds,2)==1
+                        % TODO: (Rody Oldenhuis)  
+
+                    elseif size(inds,2)==2                        
+                        [x,y] = meshgrid(linspace(lb(1),ub(1), 100),...
+                                         linspace(lb(2),ub(2), 100));
+                        z = reshape(pop{1}.funfcn{1}([x(:) y(:)]), size(x));
+
+                        function_outline = surf(x,y,z, ...
+                                                'edgecolor', [.8 .8 .8],...
+                                                'facecolor', 'b',...
+                                                'facealpha', 0.25);   
+                                            
+                        chopped_function_outline = surf(x,y,NaN(size(z)), ...
+                                                        'edgecolor', 'none',...
+                                                        'facecolor', 'r',...
+                                                        'facealpha', 0.1);                    
+                    end
+                end
+                
+            else
+                update_axes = generation ~= previous_generation;
+                
+                set(0, 'currentfigure', fighandle);                
+                delete(plothandles(ishandle(plothandles)));
+                plothandles = [];
+            end
+            
+            minfval = [];   
             colors = {'r.';'b.';'g.';'k.';
                       'ro';'bo';'go';'ko';
                       'rx';'bx';'gx';'kx';
                       'r^';'b^';'g^';'k^';};
                               
-            % loop through all algorithms
+            % loop through all algorithms            
             for ii = 1:algorithms
                 
                 % extract function values
@@ -1067,7 +1161,7 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     if isempty(minfval)
                         minfval = min(fvals(:));  maxfval = max(fvals(:));
                         if ~isfinite(minfval), minfval = -1e-100; end
-                        if ~isfinite(maxfval), maxfval = 1e100; end
+                        if ~isfinite(maxfval), maxfval = +1e+100; end
                     else
                         if min(fvals(:)) < minfval, minfval = min(fvals(:)); end
                         if max(fvals(:)) > maxfval, maxfval = max(fvals(:)); end
@@ -1078,21 +1172,27 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     
                     % plot the variables versus their function value
                     if (size(inds,2) == 1)      % one dimensional
-                        plot(inds, fvals, colors{ii});                        
+                        plothandles(end+1) = plot(inds, fvals, colors{ii},...
+                                                  'MarkerSize', 15); %#ok<AGROW>
                     elseif (size(inds,2) == 2)  % two dimensional
-                        plot3(inds(:, 1), inds(:, 2), fvals, colors{ii});
+                        plothandles(end+1) = plot3(inds(:, 1), inds(:, 2), fvals, colors{ii},...
+                                                   'MarkerSize', 15); %#ok<AGROW>
                     end % if
+                    
                 end % if single
                     
                 % multi-objective    
-                if multi                    
+                if multi                       
                     % plot the function values against each other   
                     if (size(fvals,2) == 2)     % two objectives
-                        plot(fvals(:, 1), fvals(:, 2), colors{ii});
+                        plothandles(end+1) = plot(fvals(:, 1), fvals(:, 2), colors{ii},...
+                                                  'MarkerSize', 15); %#ok<AGROW>                                              
                     elseif (size(fvals,2) == 3) % three objectives
-                        plot3(fvals(:, 1), fvals(:, 2), fvals(:, 3), colors{ii});
+                        plothandles(end+1) = plot3(fvals(:, 1), fvals(:, 2), fvals(:, 3), colors{ii},...
+                                                   'MarkerSize', 15); %#ok<AGROW>
                     end % if         
                 end % if
+                
             end % for
                         
             % adjust legend entries
@@ -1102,62 +1202,132 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                     [legend_entries{loop_index}, ' \bf{(evaluating)}'];
             end
             
+            legend_entries = ['Function outline'
+                              'Excluded parts'
+                              legend_entries];
+            
+            update_axes = false; 
+            if ~isequal(legend_entries, previous_legend_entries)
+                legend_update_needed = true; 
+                update_axes          = true; 
+            end
+                                    
             % make plot
             if single
+                
                 % plot & axes 
-                if     (size(inds,2) == 1) % one-dimensional
-                    xlabel('Decision variable x'), ylabel('Function value F(x)')
-                    axis([lb(1) ub(1) minfval-1e-100 maxfval+1e-100])
-                    if converged
-                        plot(output.global_best_individual, output.global_best_funval, 'ko',...
-                            'MarkerFaceColor', 'g', 'MarkerSize', 10)
+                if (size(inds,2) == 1) % one-dimensional
+                    
+                    if initial_draw
+                        xlabel('Decision variable x')
+                        ylabel('Function value F(x)')                        
                     end
+                    
+                    if update_axes
+                        %axis([lb(1) ub(1) minfval-1e-100 maxfval+1e-100]); 
+                        % TODO: (Rody Oldenhuis) do similar chop of outline
+                        % here
+                    end
+                    
+                    if converged
+                        plothandles(end+1) = plot(output.global_best_individual, output.global_best_funval, 'ko',...
+                            'MarkerFaceColor', 'g', ...
+                            'MarkerSize'     , 20);
+                    end
+                    
                 elseif (size(inds,2) == 2) % two-dimensional
-                    xlabel('Decision variable x_1'), ylabel('Decision variable x_2')
-                    zlabel('Function value F(x)'), view(30,50)
-                    axis([lb(1) ub(1) lb(2) ub(2) minfval-1e-16 maxfval+1e-16])
-                    if converged
-                        plot3(output.global_best_individual(1),output.global_best_individual(2),...
-                            output.global_best_funval, 'ko','MarkerFaceColor', 'g', ...
-                            'MarkerSize', 10), view(30,50)
+                    
+                    if initial_draw                    
+                        xlabel('Decision variable x_1')
+                        ylabel('Decision variable x_2')
+                        zlabel('Function value F(x)')
+                        view(50,50)
                     end
+                    
+                    if update_axes
+                        %axis([lb(1) ub(1) lb(2) ub(2) minfval-1e-16 maxfval+1e-16]); 
+                             
+                        M = max(cellfun(@(x)max(x.fitnesses), pop));
+                        
+                        outline         = get(function_outline, 'zdata'); 
+                        chopped_outline = get(chopped_function_outline, 'zdata');                         
+                        
+                        chopped_outline(outline > M) = outline(outline > M);
+                        outline(outline > M) = NaN; 
+                        
+                        set(function_outline, 'zdata', outline);                        
+                        set(chopped_function_outline, 'zdata', chopped_outline);                        
+                    end
+                    
+                    if converged
+                        plothandles(end+1) = plot3(output.global_best_individual(1),output.global_best_individual(2),...
+                            output.global_best_funval, 'ko','MarkerFaceColor', 'g', ...
+                            'MarkerSize', 10);
+                        view(50,50)
+                    end                    
                 end
-                % make nice title
+                
+                % Update title
                 if ~converged
-                    title({'Current population versus objective function';
-                        ['Generation ', num2str(generation),...
-                        ', Function evaluations = ', num2str(num_funevaluations)]});
+                    
+                    if initial_draw                    
+                    title('Current population versus objective function');end
+                        % TODO: (Rody Oldenhuis) slow...
+                       % ['Generation ', num2str(generation),...
+                       % ', Function evaluations = ', num2str(num_funevaluations)]});
+
                 else
+                    legend_update_needed = true; 
+                    
                     % adjust legend
                     legend_entries{end+1} = 'global optimum';
                     % create the title
                     title({'Converged population versus objective function';
-                        ['Generation ', num2str(generation),...
-                        ', Function evaluations = ', num2str(num_funevaluations)];
-                        '(Global optimum is the green dot)';});
+                          ['Generation ', num2str(generation),...
+                           ', Function evaluations = ', num2str(num_funevaluations)];
+                           '(Global optimum is the green dot)';});
                 end
+                
             elseif multi
+                
                 % plot & axes 
                 if     (size(fvals,2) == 2)     % two objectives
-                    xlabel('F_1(x)'), ylabel('F_2(x)')
+                    
+                    if initial_draw
+                        xlabel('F_1(x)')
+                        ylabel('F_2(x)')
+                    end
+                    
                     if converged
-                        plot(output.most_efficient_fitnesses(1),...
+                        plothandles(end+1) = plot(output.most_efficient_fitnesses(1),...
                             output.most_efficient_fitnesses(2), 'ko','MarkerFaceColor', 'g',...
-                            'MarkerSize', 10)
+                            'MarkerSize', 10);
                     end
                 elseif (size(fvals,2) == 3)     % three objectives
-                    xlabel('F_1(x)'), ylabel('F_2(x)'), zlabel('F_3(x)'), view(30,50)
-                    if converged
-                        plot3(output.most_efficient_fitnesses(1),...
-                            output.most_efficient_fitnesses(2),output.most_efficient_fitnesses(3),...
-                            'ko','MarkerFaceColor','g','MarkerSize',10), view(30,50)
+                    
+                    if initial_draw
+                        xlabel('F_1(x)')
+                        ylabel('F_2(x)')
+                        zlabel('F_3(x)')
+                        view(50,50)
                     end
+                    
+                    if converged
+                        plothandles(end+1) = plot3(output.most_efficient_fitnesses(1),...
+                            output.most_efficient_fitnesses(2),output.most_efficient_fitnesses(3),...
+                            'ko','MarkerFaceColor','g','MarkerSize',10); 
+                        view(50,50)
+                    end
+                    
                 end
-                % make nice title
-                if ~ converged
+                
+                % Update title
+                if ~converged 
                     title({'Current Pareto Front'; ['Generation ', num2str(generation),...
                         ', Function evaluations = ', num2str(num_funevaluations)]});
                 else
+                    legend_update_needed = true;
+                    
                     % adjust legend
                     legend_entries{end+1} = 'most efficient';
                     % make nice title
@@ -1165,13 +1335,25 @@ function varargout = GODLIKE(funfcn, popsize, lb, ub, varargin)
                         ', Function evaluations = ', num2str(num_funevaluations)];
                         '(Green dot is the most efficient point)'});
                 end
+                
             end
             
-            % draw legend
-            legend(legend_entries{:});                 
+            % draw legend                        
+            if legend_update_needed 
+                legend([function_outline chopped_function_outline plothandles],...
+                       legend_entries{:},...
+                       'Location', 'NorthEast'); 
+            end
             
             % do not delay plotting
-            drawnow       
+            drawnow     
+            
+            previous_legend_entries = legend_entries;
+            previous_generation = generation;
+            if converged
+                fighandle = []; 
+                previous_legend_entries = {};                
+            end
                         
         end % if
     end % nested function  
