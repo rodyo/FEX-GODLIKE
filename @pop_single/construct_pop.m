@@ -14,10 +14,14 @@ function pop = construct_pop(pop, varargin)
         pop.pop_data = varargin{1};
 
         % simply copy previous object
-        pop.funfcn     = varargin{2}.funfcn;       pop.iterations = varargin{2}.iterations;
-        pop.algorithm  = varargin{2}.algorithm;    pop.lb         = varargin{2}.lb;
-        pop.funevals   = varargin{2}.funevals;     pop.ub         = varargin{2}.ub;
-        pop.dimensions = varargin{2}.dimensions;   pop.orig_size  = varargin{2}.orig_size;
+        pop.funfcn      = varargin{2}.funfcn;       pop.iterations = varargin{2}.iterations;
+        pop.algorithm   = varargin{2}.algorithm;    pop.lb         = varargin{2}.lb;
+        pop.funevals    = varargin{2}.funevals;     pop.ub         = varargin{2}.ub;
+        pop.dimensions  = varargin{2}.dimensions;   pop.orig_size  = varargin{2}.orig_size;
+        %{
+        pop.eq_indices  = varargin{2}.eq_indices;   pop.confcn     = varargin{2}.confcn;
+        pop.constrained = varargin{2}.constrained;
+        %}
 
         % copy individuals and fitnesses
         pop.individuals = pop.pop_data.parent_population;
@@ -31,10 +35,10 @@ function pop = construct_pop(pop, varargin)
         pop.ub = repmat(pop.ub(1, :), pop.size, 1);
 
         % Some algorithms need some lengthier initializing
-        pop.initialize_algorithms;
+        pop.initialize_algorithms();
 
-        % return
-        return
+        
+        return;
     end
 
     % input is ( funfcn, popsize, lb, ub, dimensions, options )

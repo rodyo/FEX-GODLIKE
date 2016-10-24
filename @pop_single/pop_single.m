@@ -29,11 +29,20 @@ classdef pop_single < handle
         iterations = 0;    % iterations so far performed
         options            % options structure (see function [set_options] for info)
         pop_data           % structure to store intermediate data
+        eq_indices         % those indices of LU and UB, for which their values are equal
+        eq_values          % the corresponding equal values         
+        trans_individuals  % transformed individuals 
+                           % (sine transformed and without the equal
+                           % values)
         % contents for single-objective optimization:
         %      pop_data.parent_population
         %      pop_data.offspring_population
         %      pop_data.function_values_parent
         %      pop_data.function_values_offspring
+        %      pop_data.unpenalized_function_values_parent     (for constrained optimization)
+        %      pop_data.unpenalized_function_values_offspring  (for constrained optimization)
+        %      pop_data.constraint_violations_parent           (for constrained optimization)
+        %      pop_data.constraint_violations_offspring        (for constrained optimization)
     end
 
     % public methods
@@ -60,6 +69,14 @@ classdef pop_single < handle
 
     % % protected/hidden methods
     methods (Access = protected, Hidden)
+        
+        % wrapper function which includes the equal-valued, and 
+        % applies the sine-transformation
+        transformed_individuals = wrapperFcn(pop, input_population, sites);
+        
+        % compute penalties and insert constraint violations in pop_data
+        % (used for constrained optimizations)
+        funvals = penalize(pop, funvals, convals, sites);
 
         % tournament selection (only for GA)
         pool = tournament_selection(pop, pool_size, tournament_size);
