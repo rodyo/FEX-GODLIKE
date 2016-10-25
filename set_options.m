@@ -40,6 +40,11 @@ function options = set_options(varargin)
 %                 fronts), while a Pareto front of much better quality is
 %                 obtained if some additional shuffles are performed. The
 %                 default value is 2.
+%   UseParallel : logical, either false (default), or true. If enabled, it
+%                 will use run function evaluations within each
+%                 generation in parallel. It uses MATLAB's native parfor
+%                 keyword for this, utilizing the current parallel
+%                 execution pool (see parfor for more info).
 %
 %   ======================================================================
 %   Options specific to the GODLIKE Algorithm:
@@ -91,17 +96,6 @@ function options = set_options(varargin)
 %   ======================================================================
 %   General Settings for Multi-Objective Optimization:
 %   ======================================================================
-%        SkipTest : If set to 'on', some initial tests that are performed on
-%                   the objective and constraint functions. These tests
-%                   automatically determine whether the function accepts
-%                   vectorized input or not, and how many objectives the
-%                   problem has. The default is 'on', but it may be switched
-%                   'off'. In case it's switched 'off', the algorithm assumes
-%                   all functions accept vectorized input, AND the number of
-%                   objectives (the next option) has been given, AND the
-%                   dimensionality of the problem is also given (two options
-%                   down). The 'off'-switch will be ignored if either of these
-%                   demands is not true.
 %   NumObjectives : Positive scalar. Sets the number of objectives manually.
 %                   When the objective function is a single function that
 %                   returns multiple objectives, the algorithm has to first
@@ -211,7 +205,6 @@ Document these options:
    - QuitWhenAchieved
    - NumStreams
    - algorithms
-   - popsize
    - ConstraintsInObjectiveFunction
    - ReinitRatio
 %}
@@ -238,6 +231,7 @@ Document these options:
         options.TolX          = 1e-4;
         options.TolFun        = 1e-4;
         options.AchieveFunVal = inf;
+        options.UseParallel   = false;
 
         % TODO: Not yet implemented
         options.TolCon           = 1e-4;
@@ -252,6 +246,7 @@ Document these options:
         % CAN'T BE SET MANUALLY - INTERNAL USE ONLY
         options.num_objectives = 1;
         options.dimensions     = [];
+        options.obj_columns    = false; % Function returns objectives as columns?
 
         % Differential Evolution
         options.DE.Flb        = -1.5;
@@ -320,16 +315,19 @@ Document these options:
                         throwwarning('Display', 'char', value);
                         continue;
                     end
-                    if     strcmpi(value, 'off')
-                        options.display = [];
-                    elseif strcmpi(value, 'CommandWindow') || strcmpi(value, 'on')
-                        options.display = 'CommandWindow';
-                    elseif strcmpi(value, 'Plot')
-                        options.display = 'Plot';
-                    else
-                        error([mfilename ':unknown_displaytype'], [...
-                              'Unsupported display type: ', '''', value, '''.'])
+
+                    switch lower(value)
+                        case 'off'
+                            options.display = [];
+                        case {'commandwindow' 'on'}
+                            options.display = 'CommandWindow';
+                        case 'plot'
+                            options.display = 'Plot';
+                        otherwise
+                            error([mfilename ':unknown_displaytype'], [...
+                                  'Unsupported display type: ', '''', value, '''.'])
                     end
+
 
                 case 'maxfunevals'
                     if ~isnumeric(value)
@@ -380,7 +378,24 @@ Document these options:
                     end
                     options.AchieveFunVal = value;
 
+                case 'useparallel'
+                    value = string2logical(value);
+                    if ~isscalar(value) || ~islogical(value)
+                        throwwarning('UseParallel', 'double', value);
+                        continue;
+                    end
+                    options.UseParallel = value;
+
+                    % Check for toolbox
+                    if value && isempty(ver('distcomp'))
+                        warning([mfilename ':pct_not_available'], [...
+                                'Option ''UseParallel'' is only useful when the ',...
+                                'parallel computing toolbox is available, which ',...
+                                'does not seem to be the case.']);
+                    end
+
                 case 'quitwhenachieved'
+                    value = string2logical(value);
                     if ~isscalar(value) && ~islogical(value)
                         throwwarning('AchieveFunVal', 'logical', value);
                         continue;
@@ -424,6 +439,7 @@ Document these options:
                     options.NumStreams = value;
 
                 case 'algorithms'
+
                     % check input
                     if ischar(value)
                         value = {value}; end
@@ -431,6 +447,7 @@ Document these options:
                         throwwarning('Algorithms', 'cell', value);
                         continue;
                     end
+
                     % check if each one of them is a character array
                     chars_ok = cellfun(@ischar, value);
                     if ~all(chars_ok)
@@ -623,17 +640,6 @@ Document these options:
                     options.GODLIKE.popsize = value;
 
                 % General Settings
-                case 'skiptest'
-                    if ~isnumeric(value)
-                        throwwarning('SkipTest', 'char', value);
-                        continue;
-                    end
-                    if     strcmpi(value, 'on')
-                        options.skip_function_test = true;
-                    elseif strcmpi(value, 'off')
-                        options.skip_function_test = false;
-                    end
-
                 case 'numobjectives'
                     if ~isnumeric(value)
                         throwwarning('NumObjectives', 'double', value);
@@ -674,3 +680,12 @@ function throwwarning(option, required, given, varargin)%#ok
                 num2str(option));
     end % if
 end % nested function
+
+
+% Allow logicals to be given as string {'on' | 'off'}
+function value = string2logical(value)
+    if ischar(value)
+        if strcmpi(value, 'on'), value = true;  end
+        if strcmpi(value,'off'), value = false; end
+    end
+end

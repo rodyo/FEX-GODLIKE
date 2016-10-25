@@ -106,6 +106,9 @@ classdef pop_multi < pop_single
         % Update globally changing variables associated with each algorithm
         update_algorithms(pop);
 
+        % overload from pop_single
+        evaluate_function(pop);
+
     end % protected/hidden methods
 
 end % classdef

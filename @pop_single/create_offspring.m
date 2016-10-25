@@ -104,10 +104,10 @@ function create_offspring(pop, pool, times, FE)
             temp_pop = zeros(pop.size, pop.dimensions);
             if numel(parent_pop) ~= pop.size*pop.dimensions
                 % insert all values from the pool
-                temp_pop(1:size(parent_pop,1), :) = parent_pop; 
+                temp_pop(1:size(parent_pop,1), :) = parent_pop;
                 % insert random members from [parent_pop]
-                for i = size(parent_pop,1)+1:pop.size 
-                    randinds = round(rand*(size(parent_pop,1)-1)+1); 
+                for i = size(parent_pop,1)+1:pop.size
+                    randinds = round(rand*(size(parent_pop,1)-1)+1);
                     temp_pop(i, :) = parent_pop(randinds, :);
                 end
                 % equate the two
@@ -212,9 +212,9 @@ function create_offspring(pop, pool, times, FE)
                 % equate the two
                 parent_pop = real_representation;
                 % initialize children
-                children = zeros(2, size(parent_pop, 2)); 
+                children = zeros(2, size(parent_pop, 2));
                 % redefine newpop
-                newpop = zeros(pop.size, size(parent_pop, 2)); 
+                newpop = zeros(pop.size, size(parent_pop, 2));
             end
 
             % perform crossover
@@ -268,7 +268,7 @@ function create_offspring(pop, pool, times, FE)
             end
 
             % mutation operator
-            mutate = rand(pop.size, size(parent_pop,2)) < MutProb; 
+            mutate = rand(pop.size, size(parent_pop,2)) < MutProb;
             % If any individual mutates, the function has to be re-evaluated
             newfit(sum(mutate,2)>0,:) = NaN;
             % Binary coding - simply flip bits
@@ -337,7 +337,11 @@ function create_offspring(pop, pool, times, FE)
                 end
 
                 % assign newpop
-                newpop = signs.*temp_pop;
+                %newpop = signs.*temp_pop;
+
+                % CG: removed 'signs.*' because it's not needed:
+                % Real representation preserves signs?
+                newpop = temp_pop;
             end
 
         % Adpative Simulated Annealing
@@ -352,7 +356,7 @@ function create_offspring(pop, pool, times, FE)
             if numel(parent_pop) ~= pop.size*pop.dimensions
 
                 % insert all values from the pool
-                temp_pop(1:size(parent_pop,1), :) = parent_pop; 
+                temp_pop(1:size(parent_pop,1), :) = parent_pop;
 
                 % insert random members from [parent_pop]
                 for ii = size(parent_pop,1)+1:pop.size

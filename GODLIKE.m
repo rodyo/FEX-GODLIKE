@@ -585,6 +585,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
                 if single && (numel(sol) > 1)
                     single = false;
                     options.num_objectives = numel(sol);
+                    options.obj_columns    = true;
                 end
 
                 % it might happen that more than one function is provided,
@@ -724,7 +725,27 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         offspring_fits = parent_fits;
         if multi
             front_numbers      = zeros(popsize, 1);
-            crowding_distances = [front_numbers;front_numbers];
+
+            %crowding_distances = [front_numbers;front_numbers];
+            %{
+            if (generation == 2)
+               % only one set after 1st generation
+               crowding_distances = front_numbers;
+            else
+               crowding_distances = [front_numbers;front_numbers];
+            end
+            %}
+            crowding_size = 0;
+            for ii = 1:number_of_algorithms
+                if (pop{ii}.iterations == 1)
+                    % only one set after 1st generation
+                    crowding_size = crowding_size + pop{ii}.size;
+                else
+                    crowding_size = crowding_size + 2 * pop{ii}.size;
+                end
+                crowding_distances = zeros(crowding_size, 1);
+            end
+
         end
         if constrained
             parent_constrviolation     = zeros(popsize, numel(confcn));
@@ -751,11 +772,22 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
             % stuff specific for multi-objective optimization
             if multi
                 front_numbers(lfe1+1:lfe1+popsz, :)        = popinfo.front_number;
-                crowding_distances(lfe2+1:lfe2+2*popsz, :) = popinfo.crowding_distance;
+
+                % BUGFIX: (2016/October/25, CG)
+                %crowding_distances(lfe2+1:lfe2+2*popsz, :) = popinfo.crowding_distance;
+                %if (generation == 2)
+                if (pop{ii}.iterations == 1)
+                    multisize = popsz;
+                else
+                    multisize = 2*popsz;
+                end
+
+                crowding_distances(lfe2+1:lfe2+multisize, :) = popinfo.crowding_distance;
+                lfe2 = lfe2 + multisize;
             end
 
-            % update indices
-            lfe1 = lfe1 + popsz;  lfe2 = lfe2 + 2*popsz;
+            lfe1 = lfe1 + popsz;
+            lfe2 = lfe2 + popsz;
 
         end % for
 
@@ -764,7 +796,18 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
         if multi
-            [dummy, rndinds2]  = sort(rand(2*popsize, 1));%#ok<ASGLU>
+
+            % BUGFIX: (2016/October/25, CG)
+            %[dummy, rndinds2]  = sort(rand(2*popsize, 1));%#ok<ASGLU>
+            if (generation == 2)
+                multisize = popsize;
+            else
+                multisize = 2*popsize;
+            end
+
+            %[dummy, rndinds2]  = sort(rand(multisize, 1));%#ok<ASGLU>
+            [dummy, rndinds2]  = sort(rand(crowding_size, 1));%#ok<ASGLU>
+
             front_numbers      = front_numbers(rndinds,:);
             crowding_distances = crowding_distances(rndinds2,:);
         end
@@ -1106,7 +1149,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
               most_efficient_point,...
               most_efficient_fitnesses,...
               violations] = get_Paretos()
-        % TODO: (Rody Oldenhuis) complete this  
+        % TODO: (Rody Oldenhuis) complete this
 
         % for unconstrained problems
         violations = [];
@@ -1118,7 +1161,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         % find the last non-empty population in this stream
         t = sum(~cellfun('isempty', pop(:)));
 
-        % the algorithm might not have been used yet        
+        % the algorithm might not have been used yet
         %{
         if (pop{t}.iterations == 0)
             continue; end
@@ -1280,7 +1323,7 @@ function options = check_parsed_input(argoutc, ...
         options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
         options.GODLIKE.ItersLb = u_b;
     end
-    if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
+    if (options.MinIters  > options.MaxIters)
         warning([mfilename ':MaxIters_exceeds_MinIters'], [...
                 'Value of options.MinIters is larger than value of\n',...
                 'options.MaxIters. Values will simply be swapped.']);
