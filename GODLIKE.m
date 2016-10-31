@@ -801,22 +801,11 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         end % for
 
         % shuffle everything at random
-        [dummy, rndinds] = sort(rand(popsize, 1));%#ok<ASGLU>
+        [dummy, rndinds] = sort(rand(total_popsize, 1));%#ok<ASGLU>
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
-        if multi
-
-            % BUGFIX: (2016/October/25, CG)
-            %[dummy, rndinds2]  = sort(rand(2*popsize, 1));%#ok<ASGLU>
-            if (generation == 2)
-                multisize = popsize;
-            else
-                multisize = 2*popsize;
-            end
-
-            %[dummy, rndinds2]  = sort(rand(multisize, 1));%#ok<ASGLU>
+        if multi            
             [dummy, rndinds2]  = sort(rand(crowding_size, 1));%#ok<ASGLU>
-
             front_numbers      = front_numbers(rndinds,:);
             crowding_distances = crowding_distances(rndinds2,:);
         end
