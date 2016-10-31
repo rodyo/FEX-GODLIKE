@@ -8,8 +8,6 @@ function evaluate_function(pop)
         sites = 1:pop.size; % only in pop-initialization
         fvs = zeros(length(sites), 1);  % Single-objective only
     else
-        % TODO: check if this works correctly; set as logicals
-        % here, but used as index below
         sites = ~isfinite(pop.pop_data.function_values_offspring(:, 1));
         fvs = zeros(nnz(sites), ...
                     size(pop.pop_data.function_values_offspring, 2));
@@ -20,18 +18,17 @@ function evaluate_function(pop)
     %{
     THIS:
     %}
-    num_pop = nnz(sites);
+    num_pop = sum(sites);
 
-    % evaluate all functions for each population member in
+    % Evaluate all functions for each population member in
     % parallel or in serial
-    %fvs = pop.pop_data.offspring_population(sites, :);
     if pop.options.UseParallel
         parfor pop_num = 1:num_pop
-            fvs(pop_num, :) = evaluate_one_function(pop, pop_inputs(pop_num, :));
+            fvs(pop_num, :) = evaluate_single_function(pop, pop_inputs(pop_num, :));
         end
     else
         for pop_num = 1:num_pop
-            fvs(pop_num, :) = evaluate_one_function(pop, pop_inputs(pop_num, :));
+            fvs(pop_num, :) = evaluate_single_function(pop, pop_inputs(pop_num, :));
         end
     end
     pop.pop_data.function_values_offspring(sites, :) = fvs;
@@ -77,7 +74,7 @@ function evaluate_function(pop)
 
 end % function
 
-function pop_output = evaluate_one_function(pop, pop_input)
+function pop_output = evaluate_single_function(pop, pop_input)
 
     % TODO: move this to pop_multi and keep a simpler one here. Test
     % with demo.
