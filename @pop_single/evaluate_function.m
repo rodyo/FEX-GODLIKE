@@ -18,7 +18,7 @@ function evaluate_function(pop)
     %{
     THIS:
     %}
-    num_pop = sum(sites);
+    num_pop = nnz(sites);
 
     % Evaluate all functions for each population member in
     % parallel or in serial
@@ -81,12 +81,13 @@ function pop_output = evaluate_single_function(pop, pop_input)
 
     % Evaluate a single iterations of function(s), so that this can be run in
     % parallel.
-
+    
     if pop.options.obj_columns
         pop_output = feval(pop.funfcn{1}, pop_input);
     else
+        pop_output = zeros(numel(pop.funfcn),1);
         for ii = 1:numel(pop.funfcn)
-            pop_output(1, ii) = feval(pop.funfcn{ii}, pop_input);
+            pop_output(ii) = feval(pop.funfcn{ii}, pop_input);
         end
     end
 

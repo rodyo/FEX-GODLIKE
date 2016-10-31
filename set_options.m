@@ -56,9 +56,11 @@ function options = set_options(varargin)
 %       ItersUb : positive scalar. This sets the maximum TOTAL amount of
 %                 iterations that will be spent in all of the selected
 %                 heuristic optimizers combined. The default value is 100.
-%       popsize : Total population size for all global optimization
-%                 algorithms used, combined. When omitted, defaults to
-%                 25 times the number of dimensions.
+%       popsize : Positive integer(s). Total population size for all global
+%                 optimization algorithms used, combined. If an array is 
+%                 given, it indicates exactly the population size of each 
+%                 algorithm specified below. When omitted, defaults to 25 
+%                 times the number of decision variables.
 %    algorithms : The algorithms to be used in the optimizations. May
 %                 be a single string, e.g., 'DE', in which case the
 %                 optimization is equal to just running a single
@@ -633,8 +635,8 @@ Document these options:
                     options.GODLIKE.ItersUb = value;
 
                 case 'popsize'
-                    if ~isscalar(value) || ~isreal(value) || ~isfinite(value) || value < 0
-                        throwwarning('ItersUb', 'double', value);
+                    if any(~isreal(value)) || any(~isfinite(value)) || any(value < 0)
+                        throwwarning('popsize', 'double', value);
                         continue;
                     end
                     options.GODLIKE.popsize = value;

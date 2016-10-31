@@ -183,7 +183,16 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
     while ~converged
 
         % randomize population sizes (minimum is 5 individuals)
-        frac_popsize = break_value(popsize, 5);
+        %frac_popsize = break_value(popsize, 5);        
+        % popsize may already give us the divisions into algorithms
+        if length(popsize) == number_of_algorithms
+            frac_popsize  = popsize;
+            total_popsize = sum(popsize);
+        else
+            % randomize population sizes (minimum is 5 individuals)
+            frac_popsize  = break_value(popsize, 5);
+            total_popsize = popsize;
+        end
 
         % randomize number of iterations per algorithm
         % ([options.GODLIKE.ItersUb] is the maximum TOTAL amount
@@ -487,8 +496,8 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
                 ub = repmat(ub, size(lb));
             else
                 error([mfilename ':lbub_sizes_incorrect'], [...
-                     'If the size of either [lb] or [ub] is equal to the problem''s dimenions\n',...
-                     'the size of the other must be 1x1.'])
+                      'If the size of either [lb] or [ub] is equal to the problem''s dimenions\n',...
+                      'the size of the other must be 1x1.'])
             end
         end
 
@@ -505,12 +514,12 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
 
         % check minimum popsize
         minpop = 5*numel(options.algorithms);
-        if (minpop > popsize)
+        if any(minpop > popsize)
             warning([mfilename ':popsize_too_small'], [...
-                'Each algorithm requires a population size of at least 5.\n',...
-                'Given value for [popsize] makes this impossible. Increasing\n',...
-                'argument [popsize] to ', num2str(minpop), '...']);
-            popsize = minpop;
+                    'Each algorithm requires a population size of at least 5.\n',...
+                    'Given value for [popsize] makes this impossible. Increasing\n',...
+                    'argument [popsize] to ', num2str(minpop), '...']);
+            popsize(minpop > popsize) = minpop;
         end
 
         % Assign back for consistency
@@ -719,12 +728,12 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
             return, end
 
         % initialize
-        parent_pops    = zeros(popsize, dimensions);
-        parent_fits    = zeros(popsize, options.num_objectives);
+        parent_pops    = zeros(total_popsize, dimensions);
+        parent_fits    = zeros(total_popsize, options.num_objectives);
         offspring_pops = parent_pops;
         offspring_fits = parent_fits;
         if multi
-            front_numbers      = zeros(popsize, 1);
+            front_numbers      = zeros(total_popsize, 1);
 
             %crowding_distances = [front_numbers;front_numbers];
             %{
@@ -1309,11 +1318,19 @@ function options = check_parsed_input(argoutc, ...
                                       which_ones,...
                                       options)
 
-    if (5*numel(which_ones) > popsize)
-        error([mfilename ':popsize_too_small'], [...
-              'Each algorithm requires a population size of at least 5.\n',...
-              'Given value for [popsize] makes this impossible. Increase\n',...
-              'argument [popsize] to at least ', num2str(5*numel(which_ones)), '.']);
+    assert(all( 5*numel(which_ones) <= popsize ),...
+           [mfilename ':popsize_too_small'], [...
+           'Each algorithm requires a population size of at least 5.\n',...
+           'Given value for [popsize] makes this impossible. Increase\n',...
+           'option [popsize] to at least %d.'],...
+           5*numel(which_ones));    
+       
+    if numel(popsize) > 1
+        assert(numel(popsize) == dimensions,...
+               [mfilename ':popsize_invalid_dimensions'], [...
+               'When specifying [popsize] as an array, the dimensions of that ',...
+               'array should correspond to the number of algorithms used.']);
+        
     end
     if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
         warning([mfilename ':ItersLb_exceeds_ItersUb'], [...
