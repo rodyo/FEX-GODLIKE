@@ -78,7 +78,7 @@ function pop = construct_pop(pop, varargin)
     pop.pop_data.offspring_population      = pop.individuals;
 
     % evaluate function for initial population (parents only)
-    pop.evaluate_function;
+    pop.evaluate_function();
 
     % copy function values into fitnesses properties
     pop.fitnesses = pop.pop_data.function_values_offspring;
@@ -88,6 +88,6 @@ function pop = construct_pop(pop, varargin)
     pop.pop_data.function_values_offspring = [];
 
     % some algorithms need some lengthier initializing
-    pop.initialize_algorithms;
+    pop.initialize_algorithms();
 
 end
