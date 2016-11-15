@@ -160,9 +160,9 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
 
     % if an output function's been given, evaluate them
     state = 'init'; % initialization state
-    if ~isempty(options.outputFcn)
+    if ~isempty(options.OutputFcn)
         cellfun(@(x) x([],[],state),...
-                options.outputFcn,...
+                options.OutputFcn,...
                 'UniformOutput', false);
     end
 
@@ -183,7 +183,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
     while ~converged
 
         % randomize population sizes (minimum is 5 individuals)
-        %frac_popsize = break_value(popsize, 5);        
+        %frac_popsize = break_value(popsize, 5);
         % popsize may already give us the divisions into algorithms
         if length(popsize) == number_of_algorithms
             frac_popsize  = popsize;
@@ -227,14 +227,14 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
                     pop{algo}.iterate;
 
                     % evaluate the output functions
-                    if ~isempty(options.outputFcn)
+                    if ~isempty(options.OutputFcn)
                         % most intensive part, here in the inner loop
                         state = 'interrupt';
                         % collect information
                         [x, optimValues] = get_outputFcn_values(algo);
                         % evaluate the output functions
                         stop = cellfun(@(y)y(x, optimValues, state), ...
-                                       options.outputFcn,...
+                                       options.OutputFcn,...
                                        'UniformOutput', false);
                         stop = any([stop{:}]);
                         % GODLIKE might need to stop here
@@ -302,14 +302,14 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         [converged, output] = check_convergence(converged, output);
 
         % evaluate the output functions
-        if ~outputFcnbreak && ~isempty(options.outputFcn)
+        if ~outputFcnbreak && ~isempty(options.OutputFcn)
             % end of a GODLIKE iteration
             state = 'iter';
             % collect the information
             [x, optimValues] = get_outputFcn_values([]);
             % call the output functions
             cellfun(@(y)y(x, optimValues, state),...
-                    options.outputFcn,...
+                    options.OutputFcn,...
                     'UniformOutput', false);
         end
 
@@ -408,9 +408,9 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
     end
 
      % last call to output function
-    if ~isempty(options.outputFcn)
+    if ~isempty(options.OutputFcn)
         cellfun(@(y)y([],[], 'done'),...
-                options.outputFcn,...
+                options.OutputFcn,...
                 'UniformOutput', false);
     end
 
@@ -439,9 +439,9 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         if nargin > 4 , options = set_options(varargin{2:end}); end  % individually provided
 
         % cast output functions to cell
-        if isfield(options, 'outputFcn') &&...
-                isa(options.outputFcn, 'function_handle')
-            options.outputFcn = {options.outputFcn};
+        if isfield(options, 'OutputFcn') &&...
+                isa(options.OutputFcn, 'function_handle')
+            options.OutputFcn = {options.OutputFcn};
         end
 
         % constraint functions
@@ -804,7 +804,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         [dummy, rndinds] = sort(rand(total_popsize, 1));%#ok<ASGLU>
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
-        if multi            
+        if multi
             [dummy, rndinds2]  = sort(rand(crowding_size, 1));%#ok<ASGLU>
             front_numbers      = front_numbers(rndinds,:);
             crowding_distances = crowding_distances(rndinds2,:);
@@ -1312,14 +1312,14 @@ function options = check_parsed_input(argoutc, ...
            'Each algorithm requires a population size of at least 5.\n',...
            'Given value for [popsize] makes this impossible. Increase\n',...
            'option [popsize] to at least %d.'],...
-           5*numel(which_ones));    
-       
+           5*numel(which_ones));
+
     if numel(popsize) > 1
         assert(numel(popsize) == dimensions,...
                [mfilename ':popsize_invalid_dimensions'], [...
                'When specifying [popsize] as an array, the dimensions of that ',...
                'array should correspond to the number of algorithms used.']);
-        
+
     end
     if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
         warning([mfilename ':ItersLb_exceeds_ItersUb'], [...
@@ -1344,8 +1344,8 @@ function options = check_parsed_input(argoutc, ...
         % multi-objective optimization has a maximum of 6 output arguments
         error(nargoutchk(0, 6, argoutc, 'struct'));
     end
-    if ~isempty(options.outputFcn) && ...
-       ~all( cellfun(@(x) isa(x, 'function_handle'), options.outputFcn))
+    if ~isempty(options.OutputFcn) && ...
+       ~all( cellfun(@(x) isa(x, 'function_handle'), options.OutputFcn))
         error([mfilename ':outputFcn_shouldbe_function_handle'],...
               'All output functions should be function handles.')
     end

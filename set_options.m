@@ -57,9 +57,9 @@ function options = set_options(varargin)
 %                 iterations that will be spent in all of the selected
 %                 heuristic optimizers combined. The default value is 100.
 %       popsize : Positive integer(s). Total population size for all global
-%                 optimization algorithms used, combined. If an array is 
-%                 given, it indicates exactly the population size of each 
-%                 algorithm specified below. When omitted, defaults to 25 
+%                 optimization algorithms used, combined. If an array is
+%                 given, it indicates exactly the population size of each
+%                 algorithm specified below. When omitted, defaults to 25
 %                 times the number of decision variables.
 %    algorithms : The algorithms to be used in the optimizations. May
 %                 be a single string, e.g., 'DE', in which case the
@@ -237,7 +237,7 @@ Document these options:
 
         % TODO: Not yet implemented
         options.TolCon           = 1e-4;
-        options.outputFcn        = [];
+        options.OutputFcn        = [];
         options.NumStreams       = 1;
         options.algorithms       = {'PSO';'GA';'ASA';'DE'};
         options.QuitWhenAchieved = false;
@@ -424,13 +424,13 @@ Document these options:
 
                 case 'outputfcn'
                     if ~iscell(value) && ~isa(value, 'function_handle')
-                        throwwarning('outputFcn', 'cell or function_handle', value);
+                        throwwarning('OutputFcn', 'cell or function_handle', value);
                         continue;
                     end
-                    if ~iscell(options.outputFcn)
-                        options.outputFcn = {value};
+                    if ~iscell(options.OutputFcn)
+                        options.OutputFcn = {value};
                     else
-                        options.outputFcn = value;
+                        options.OutputFcn = value;
                     end
 
                 case 'numstreams'
