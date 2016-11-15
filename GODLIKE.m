@@ -121,7 +121,11 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
     % ==========================================================================
 
     % basic check on input
-    error(nargchk(3, inf, nargin, 'struct'));
+    if verLessThan('MATLAB', '8.6')
+        error(nargchk(3, inf, nargin)); %#ok<NCHKN>
+    else
+        narginchk(3, inf);
+    end
 
     % more elaborate check on input (nested function)
     check_initial_input(funfcn,...
@@ -804,6 +808,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
         [dummy, rndinds] = sort(rand(total_popsize, 1));%#ok<ASGLU>
         parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);
         parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
+
         if multi
             [dummy, rndinds2]  = sort(rand(crowding_size, 1));%#ok<ASGLU>
             front_numbers      = front_numbers(rndinds,:);
@@ -1339,10 +1344,18 @@ function options = check_parsed_input(argoutc, ...
     end
     if single
         % single objective optimization has a maximum of 4 output arguments
-        error(nargoutchk(0, 4, argoutc, 'struct'));
+        if verLessThan('MATLAB', '8.6')
+            error(nargoutchk(0, 4, argoutc, 'struct')); %#ok<NCHKE>
+        else
+            nargoutchk(0, 4);
+        end
     elseif multi
         % multi-objective optimization has a maximum of 6 output arguments
-        error(nargoutchk(0, 6, argoutc, 'struct'));
+        if verLessThan('MATLAB', '8.6')
+            error(nargoutchk(0, 6, argoutc, 'struct')); %#ok<NCHKE>
+        else
+            nargoutchk(0, 6);
+        end
     end
     if ~isempty(options.OutputFcn) && ...
        ~all( cellfun(@(x) isa(x, 'function_handle'), options.OutputFcn))
