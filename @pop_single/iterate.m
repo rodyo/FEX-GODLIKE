@@ -1,12 +1,13 @@
 function iterate(pop, times, FE)
-    % [times] and [FE] are only used for the MultiStart algorithm
+% NOTE: [times] and [FE] are only used for the MultiStart algorithm
 
-    % select proper candiadates
+    % Select proper candiadates
     if strcmpi(pop.algorithm, 'GA')
-        pool = ...               % binary tournament selection for GA
-        pop.tournament_selection(pop.size, 2);
+        % binary tournament selection for GA
+        pool = pop.tournament_selection(pop.size, 2);
     else
-        pool = 1:pop.size;       % whole population otherwise
+        % whole population otherwise
+        pool = 1:pop.size;
     end
 
     % create offspring
@@ -20,7 +21,6 @@ function iterate(pop, times, FE)
     if strcmpi(pop.algorithm, 'MS')
         % adjust iterations
         pop.iterations = pop.iterations + times;
-        % then return
         return
     end
 
@@ -29,15 +29,13 @@ function iterate(pop, times, FE)
         pop.evaluate_function;
     catch userFcn_ME
         pop_ME = MException('pop_single:function_doesnt_evaluate',...
-            'GODLIKE cannot continue: failure during function evaluation.');
+                            'GODLIKE cannot continue: failure during function evaluation.');
         userFcn_ME = addCause(userFcn_ME, pop_ME);
         rethrow(userFcn_ME);
     end
 
-    % replace the parents
-    pop.replace_parents;
-
-    % increase number of iterations made
+    % Continue as usual
+    pop.replace_parents();
     pop.iterations = pop.iterations + 1;
 
 end % function (single iteration)

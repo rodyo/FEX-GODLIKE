@@ -33,9 +33,9 @@ function evaluate_function(pop)
     end
     pop.pop_data.function_values_offspring(sites, :) = fvs;
 
-    % update number of function evaluations
-    % (count each function call as one even though it returns
-    % multiple objectives)
+    % Update number of function evaluations
+    % NOTE: count each function call as one, even though it may return
+    % multiple objectives.
     pop.funevals = pop.funevals + num_pop*numel(pop.funfcn);
 
     %{
@@ -72,7 +72,7 @@ function evaluate_function(pop)
         nnz(sites) * size(pop.pop_data.function_values_offspring, 2);
     %}
 
-end % function
+end % method
 
 function pop_output = evaluate_single_function(pop, pop_input)
 
@@ -81,7 +81,7 @@ function pop_output = evaluate_single_function(pop, pop_input)
 
     % Evaluate a single iterations of function(s), so that this can be run in
     % parallel.
-    
+
     if pop.options.obj_columns
         pop_output = feval(pop.funfcn{1}, pop_input);
     else
@@ -91,4 +91,4 @@ function pop_output = evaluate_single_function(pop, pop_input)
         end
     end
 
-end % function
+end % subfunction

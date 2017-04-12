@@ -1,4 +1,6 @@
-function varargout = GODLIKE(funfcn, lb, ub, varargin)
+function varargout = GODLIKE(funfcn, ...
+                             lb, ub, ...
+                             varargin)
 % GODLIKE           Global optimizer that combines the power
 %                   of a Genetic Algorithm, Diffential Evolution,
 %                   Particle Swarm Optimization and Adaptive
@@ -35,72 +37,72 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
 % INPUT ARGUMENTS:
 % ================
 %
-%   obj_fun     The objective function of which the global minimum
-%               will be determined (function_handle). For multi-
-%               objective optimization, several objective functions
-%               may be provided as a cell array of function handles,
-%               or alternatively, in a single function that returns
-%               the different function values along the second
-%               dimension.
-%               Objective functions must accept either a [popsize x
-%               dimensions] matrix argument, or a [1 x dimensions]
-%               vector argument, and return a [popsize x number of
-%               objectives] matrix or [1 x number of objective]
-%               vector of associated function values (number of
-%               objectives may be 1). With the first format, the
-%               function is evaluated vectorized, in  the second
-%               case CELLFUN() is used, which is a bit slower in
-%               general.
+%   obj_fun        The objective function of which the global minimum
+%                  will be determined (function_handle). For multi-
+%                  objective optimization, several objective functions
+%                  may be provided as a cell array of function handles,
+%                  or alternatively, in a single function that returns
+%                  the different function values along the second
+%                  dimension.
+%                  Objective functions must accept either a [popsize x
+%                  dimensions] matrix argument, or a [1 x dimensions]
+%                  vector argument, and return a [popsize x number of
+%                  objectives] matrix or [1 x number of objective]
+%                  vector of associated function values (number of
+%                  objectives may be 1). With the first format, the
+%                  function is evaluated vectorized, in  the second
+%                  case CELLFUN() is used, which is a bit slower in
+%                  general.
 %
-%   lb, ub      The lower and upper bounds of the problem's search
-%               space, for each dimension. May be scalar in case all
-%               bounds in all dimensions are equal. Note that at
-%               least ONE of these must have a size of [1 x
-%               dimensions], since the problem's dimensionality is
-%               derived from it.
+%   lb, ub         The lower and upper bounds of the problem's search
+%                  space, for each dimension. May be scalar in case all
+%                  bounds in all dimensions are equal. Note that at
+%                  least ONE of these must have a size of [1 x
+%                  dimensions], since the problem's dimensionality is
+%                  derived from it.
 %
-%   confcn      Constraint functions; not yet fully implemented.
+%   conFcn         Non-linear constraint function(s); not yet fully
+%                  implemented.
 %
 %
-%   options/    Sets the options to be used by GODLIKE. Options may
-%   'option',   be a structure created by set_options, or given as
-%      value    individual ['option', value] pairs. See set_options
-%               for a list of all the available options and their
-%               defaults.
+%   options/       Sets the options to be used by GODLIKE. Options may
+%   'option',      be a structure created by set_options, or given as
+%      value       individual ['option', value] pairs. See set_options
+%                  for a list of all the available options and their
+%                  defaults.
 %
 % OUTPUT ARGUMENTS:
 % =================
 %
-%   sol         The solution that minizes the problem globally,
-%               of size [1 x dimensions]. For multi-objective
-%               optimization, this indicates the point with the
-%               smallest distance to the (shifted) origin.
+%   sol            The solution that minizes the problem globally,
+%                  of size [1 x dimensions]. For multi-objective
+%                  optimization, this indicates the point with the
+%                  smallest distance to the (shifted) origin.
 %
-%   fval        The globally minimal function value
+%   fval           The globally minimal function value
 %
-%   exitflag    Additional information to facilitate fully automated
-%               optimization. Negative is `bad', positive `good'. A
-%               value of '0' indicates GODLIKE did not perform any
-%               operations and exited prematurely. A value of '1'
-%               indicates normal exit conditions. A value of '-1'
-%               indicates a premature exit due to exceeding the preset
-%               maximum number of function evaluations. A value of
-%               '-2' indicates that the amount of maximum GODLIKE
-%               iterations has been exceeded, and a value of '-3'
-%               indicates no optimum has been found (only for single-
-%               objective optimization).
+%   exitflag       Additional information to facilitate fully automated
+%                  optimization. Negative is `bad', positive `good'. A
+%                  value of '0' indicates GODLIKE did not perform any
+%                  operations and exited prematurely. A value of '1'
+%                  indicates normal exit conditions. A value of '-1'
+%                  indicates a premature exit due to exceeding the preset
+%                  maximum number of function evaluations. A value of
+%                  '-2' indicates that the amount of maximum GODLIKE
+%                  iterations has been exceeded, and a value of '-3'
+%                  indicates no optimum has been found (only for single-
+%                  objective optimization).
 %
-%   output      structure, containing much additional information
-%               about the optimization as a whole; see the manual
-%               for a more detailed description.
+%   output         structure, containing much additional information
+%                  about the optimization as a whole; see the manual
+%                  for a more detailed description.
 %
 %   (For multi-objective optimization only)
 %
-%   Pareto_front, Pareto_Fvals
-%               The full set of non-dominated solutions, and their
-%               associated function values.
+%   Pareto_front,  The full set of non-dominated solutions, and their
+%   Pareto_Fvals   associated function values.
 %
-%   See also pop_single, pop_multi, set_options.
+%   See also fminsearch, fminbnd, set_options.
 
 
 % Please report bugs and inquiries to:
@@ -108,13 +110,18 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
 % Name       : Rody P.S. Oldenhuis
 % E-mail     : oldenhuis@gmail.com    (personal)
 %              oldenhuis@luxspace.lu  (professional)
-% Affiliation: LuxSpace s�rl
+% Affiliation: LuxSpace sarl
 % Licence    : BSD
 
 
 % If you find this work useful, please consider a donation:
 % https://www.paypal.me/RodyO/3.5
 
+% If you would like to cite this work, please use the following template:
+%
+% Rody Oldenhuis, orcid.org/0000-0002-3162-3660. "GODLIKE" version
+% <version>, <date you last used it>. MATLAB global minimization algorithm.
+% https://nl.mathworks.com/matlabcentral/fileexchange/24838-GODLIKE
 
 
     %% Initialize
@@ -425,111 +432,7 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
     % Initialization shizzle
     % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
 
-    % reshape, resize and redefine input to predictable formats
-    function [lb,...
-              ub,...
-              sze,...
-              popsize,...
-              dimensions,...
-              confcn,...
-              constrained,...
-              which_ones,...
-              options] = reformat_input(lb,ub,...
-                                        varargin)
 
-        % set options
-        if nargin <= 3, options = set_options; end                   % defaults
-        if nargin == 4, options = varargin{2}; end                   % structure provided
-        if nargin > 4 , options = set_options(varargin{2:end}); end  % individually provided
-
-        % cast output functions to cell
-        if isfield(options, 'OutputFcn') &&...
-                isa(options.OutputFcn, 'function_handle')
-            options.OutputFcn = {options.OutputFcn};
-        end
-
-        % constraint functions
-        if nargin == 2 ||...
-                isempty(varargin{1}) % default - no constraint function
-
-            confcn      = {[]};
-            constrained = false;
-
-            % constraint might also be calculated inside the objective
-            % function(s)
-            if options.ConstraintsInObjectiveFunction > 0
-                constrained = true; end
-
-        else
-            confcn      = varargin{1};
-            constrained = true;
-
-            % cast to cell if only one is selected
-            if isa(confcn, 'function_handle')
-                confcn = {confcn}; end
-
-            % possible erroneous input
-            if ~iscell(confcn)
-                error([mfilename ':confcn_mustbe_cell_or_funhandle'], [...
-                      'Constraint functions must be given as a fuction_handle, ',...
-                      'or as a cell array of function_handles.']);
-            end
-            % FURTHER CHECKING WILL BE DONE IN TEST_FUNFCN()
-        end
-
-        % extract which algorithms to use
-        which_ones = options.algorithms(:);
-
-        % save the original size of [lb] or [ub]
-        max_elements = max(numel(lb),numel(ub));
-        if (max_elements == numel(lb))
-            sze = size(lb);
-        else
-            sze = size(ub);
-        end
-
-        % force [lb] and [ub] to be row vectors
-        lb = lb(:).';
-        ub = ub(:).';
-
-        % replicate one or the other when their sizes are not equal
-        if ~all(size(lb) == size(ub))
-            if     isscalar(lb)
-                lb = repmat(lb, size(ub));
-            elseif isscalar(ub)
-                ub = repmat(ub, size(lb));
-            else
-                error([mfilename ':lbub_sizes_incorrect'], [...
-                      'If the size of either [lb] or [ub] is equal to the problem''s dimenions\n',...
-                      'the size of the other must be 1x1.'])
-            end
-        end
-
-        % define [dimensions]
-        dimensions = numel(lb);
-
-        % total population size
-        % (defaults to 25*number of dimensions)
-        if isempty(options.GODLIKE.popsize)
-            popsize = min(25*dimensions, 1500);
-        else
-            popsize = options.GODLIKE.popsize;
-        end
-
-        % check minimum popsize
-        minpop = 5*numel(options.algorithms);
-        if any(minpop > popsize)
-            warning([mfilename ':popsize_too_small'], [...
-                    'Each algorithm requires a population size of at least 5.\n',...
-                    'Given value for [popsize] makes this impossible. Increasing\n',...
-                    'argument [popsize] to ', num2str(minpop), '...']);
-            popsize(minpop > popsize) = minpop;
-        end
-
-        % Assign back for consistency
-        options.GODLIKE.popsize = popsize;
-
-    end % nested function
 
     % test the function, and determine the amount of objectives. Here
     % it is decided whether the optimization is single-objective or
@@ -1251,6 +1154,111 @@ function varargout = GODLIKE(funfcn, lb, ub, varargin)
 end % function GODLIKE
 
 
+% reshape, resize and redefine input to predictable formats
+function [lb,...
+          ub,...
+          sze,...
+          popsize,...
+          dimensions,...
+          confcn,...
+          constrained,...
+          which_ones,...
+          options] = reformat_input(lb,ub,...
+                                    varargin)
+
+    % set options
+    if nargin <= 3, options = set_options; end                   % defaults
+    if nargin == 4, options = varargin{2}; end                   % structure provided
+    if nargin > 4 , options = set_options(varargin{2:end}); end  % individually provided
+
+    % cast output functions to cell
+    if isfield(options, 'OutputFcn') &&...
+            isa(options.OutputFcn, 'function_handle')
+        options.OutputFcn = {options.OutputFcn};
+    end
+
+    % constraint functions
+    if nargin == 2 || isempty(varargin{1}) % default - no constraint function
+
+        confcn      = {[]};
+        constrained = false;
+
+        % constraint might also be calculated inside the objective
+        % function(s)
+        if options.ConstraintsInObjectiveFunction > 0
+            constrained = true; end
+
+    else
+        confcn      = varargin{1};
+        constrained = true;
+
+        % cast to cell if only one is selected
+        if isa(confcn, 'function_handle')
+            confcn = {confcn}; end
+
+        % possible erroneous input
+        if ~iscell(confcn)
+            error([mfilename ':confcn_mustbe_cell_or_funhandle'], [...
+                  'Constraint functions must be given as a fuction_handle, ',...
+                  'or as a cell array of function_handles.']);
+        end
+        % FURTHER CHECKING WILL BE DONE IN TEST_FUNFCN()
+    end
+
+    % extract which algorithms to use
+    which_ones = options.algorithms(:);
+
+    % save the original size of [lb] or [ub]
+    max_elements = max(numel(lb),numel(ub));
+    if (max_elements == numel(lb))
+        sze = size(lb);
+    else
+        sze = size(ub);
+    end
+
+    % force [lb] and [ub] to be row vectors
+    lb = lb(:).';
+    ub = ub(:).';
+
+    % replicate one or the other when their sizes are not equal
+    if ~all(size(lb) == size(ub))
+        if     isscalar(lb)
+            lb = repmat(lb, size(ub));
+        elseif isscalar(ub)
+            ub = repmat(ub, size(lb));
+        else
+            error([mfilename ':lbub_sizes_incorrect'], [...
+                  'If the size of either [lb] or [ub] is equal to the problem''s dimenions\n',...
+                  'the size of the other must be 1x1.'])
+        end
+    end
+
+    % define [dimensions]
+    dimensions = numel(lb);
+
+    % total population size
+    % (defaults to 25*number of dimensions)
+    if isempty(options.GODLIKE.popsize)
+        popsize = min(25*dimensions, 1500);
+    else
+        popsize = options.GODLIKE.popsize;
+    end
+
+    % check minimum popsize
+    minpop = 5*numel(options.algorithms);
+    if any(minpop > popsize)
+        warning([mfilename ':popsize_too_small'], [...
+                'Each algorithm requires a population size of at least 5.\n',...
+                'Given value for [popsize] makes this impossible. Increasing\n',...
+                'argument [popsize] to ', num2str(minpop), '...']);
+        popsize(minpop > popsize) = minpop;
+    end
+
+    % Assign back for consistency
+    options.GODLIKE.popsize = popsize;
+
+end  % subfunction
+
 % elaborate error trapping
 function check_initial_input(funfcn,...
                              lb,...
@@ -1302,7 +1310,7 @@ function check_initial_input(funfcn,...
               'All entries in [lb] must be smaller than the corresponding ',...
               'entries in [ub].']);
     end
-end
+end % subfunction
 
 function options = check_parsed_input(argoutc, ...
                                       single,...
@@ -1326,6 +1334,7 @@ function options = check_parsed_input(argoutc, ...
                'array should correspond to the number of algorithms used.']);
 
     end
+
     if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
         warning([mfilename ':ItersLb_exceeds_ItersUb'], [...
                 'Value of options.GODLIKE.ItersLb is larger than value of\n',...
@@ -1334,6 +1343,7 @@ function options = check_parsed_input(argoutc, ...
         options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
         options.GODLIKE.ItersLb = u_b;
     end
+
     if (options.MinIters  > options.MaxIters)
         warning([mfilename ':MaxIters_exceeds_MinIters'], [...
                 'Value of options.MinIters is larger than value of\n',...
@@ -1342,6 +1352,7 @@ function options = check_parsed_input(argoutc, ...
         options.MaxIters = options.MinIters;
         options.MinIters = u_b;
     end
+
     if single
         % single objective optimization has a maximum of 4 output arguments
         if verLessThan('MATLAB', '8.6')
@@ -1357,11 +1368,13 @@ function options = check_parsed_input(argoutc, ...
             nargoutchk(0, 6);
         end
     end
+
     if ~isempty(options.OutputFcn) && ...
        ~all( cellfun(@(x) isa(x, 'function_handle'), options.OutputFcn))
         error([mfilename ':outputFcn_shouldbe_function_handle'],...
               'All output functions should be function handles.')
     end
+
     if strcmpi(options.display, 'plot') && single && dimensions > 2
         warning([mfilename ':plotting_not_possible'], [...
                 'Display type was set to ''Plot'', but the number of\n',...
@@ -1369,6 +1382,7 @@ function options = check_parsed_input(argoutc, ...
                 'displayed. Set options.display to ''off'' or ''on'' to \n',...
                 '''on'' to supress this message.'])
     end
+
     if strcmpi(options.display, 'plot') && multi && options.num_objectives > 3
         warning([mfilename ':plotting_not_possible'], [...
                 'Display type was set to ''Plot'', but the number of\n',...

@@ -24,7 +24,7 @@ function non_dominated_sort(pop)
             fits = [pop.pop_data.function_values_parent;
                 pop.pop_data.function_values_offspring];
         end
-        N    = 2*pop.size;
+        N = 2*pop.size;
     else
         inds = pop.individuals;
         fits = pop.fitnesses;
@@ -73,13 +73,22 @@ function non_dominated_sort(pop)
             % find this guy's index
             guys_ind = find(sort_inds == guy);
             % compute crowding distance
+            % FIXED: (Seth Kenner) in some cases, the crowding distance turns
+            % non-finite due to exactly-equal fitnesses (divide by zero). So,
+            % we have to take proper precautions
             if isfinite(crowding_dists(guy))
-                crowding_dists(guy) = crowding_dists(guy) + ...
-                    (sorted_fitnesses(guys_ind+1, m)-sorted_fitnesses(guys_ind-1, m))/...
-                    (sorted_fitnesses(end,m)-sorted_fitnesses(1,m));
-            else break
+
+                addition = (sorted_fitnesses(guys_ind+1, m) - sorted_fitnesses(guys_ind-1, m)) / ...
+                           (sorted_fitnesses(end,m)         - sorted_fitnesses(1,m));
+
+                if isfinite(addition)
+                    crowding_dists(guy) = crowding_dists(guy) + addition; end
+
+            else
+                break
             end % if
         end % for
+
     end % for
 
     % create new population
