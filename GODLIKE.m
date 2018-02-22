@@ -109,7 +109,6 @@ function varargout = GODLIKE(funfcn, ...
 %
 % Name       : Rody P.S. Oldenhuis
 % E-mail     : oldenhuis@gmail.com    (personal)
-%              oldenhuis@luxspace.lu  (professional)
 % Affiliation: LuxSpace sarl
 % Licence    : BSD
 
@@ -127,11 +126,17 @@ function varargout = GODLIKE(funfcn, ...
     %% Initialize
     % ==========================================================================
 
-    % basic check on input
-    if verLessThan('MATLAB', '8.6')
-        error(nargchk(3, inf, nargin)); %#ok<NCHKN>
+    % Check I/O arg counts 
+    % NOTE: (Rody Oldenhuis) R2011b introduced different argcheck mechanism
+    % The following trainwreck is the only way to maintain this basic 
+    % functionality, while addressing ALL related warnings in ALL versions 
+    % of MATLAB.
+    if verLessThan('MATLAB', '7.13')
+        error(   nargchk(3,inf,nargin ,'struct')); %#ok<*NCHKN>
+        error(nargoutchk(0,6,nargout,'struct'));   %#ok<*NCHKE>       
     else
-        narginchk(3, inf);
+        narginchk(3,inf);
+        nargoutchk(0,6);   
     end
 
     % more elaborate check on input (nested function)
@@ -742,7 +747,7 @@ function varargout = GODLIKE(funfcn, ...
 
             % re-initialize
             if single, pop{ii} = pop_single(new_popinfo, pop{ii}, options);
-            else       pop{ii} = pop_multi (new_popinfo, pop{ii}, options);
+            else,      pop{ii} = pop_multi (new_popinfo, pop{ii}, options);
             end
 
             % shrink arrays (using "... = [];" for deletion is rather slow)
@@ -816,7 +821,7 @@ function varargout = GODLIKE(funfcn, ...
                  output.most_efficient_fitnesses = [];
              end
 
-             % we're done
+             % we're done!
              return
 
          % otherwise, update according to the current status of [pops]
@@ -826,8 +831,12 @@ function varargout = GODLIKE(funfcn, ...
              % the mode of operation depends on the presence of a third
              % input argument. If given, only the current populations is
              % checked. If  omitted, all populations are checked.
-             if (nargin == 3), alg_conv = true; algorithm = algo; counter = varargin{1};
-             else alg_conv = false;
+             if (nargin == 3)
+                 alg_conv  = true; 
+                 algorithm = algo;
+                 counter   = varargin{1};
+             else
+                 alg_conv = false;
              end
 
              % general stuff
@@ -886,11 +895,12 @@ function varargout = GODLIKE(funfcn, ...
                          % update counter
                          if output.best_funcvalues(algorithm) < options.AchieveFunVal
                              if abs(output.previous_best_funcvalues(algorithm) - ...
-                                     output.best_funcvalues(algorithm)) <= options.TolFun &&...
-                                all(abs(output.previous_best_individuals(algorithm) - ...
-                                     output.best_individuals(algorithm))) <= options.TolX
+                                    output.best_funcvalues(algorithm)) <= options.TolFun &&...
+                                all(abs( output.previous_best_individuals(algorithm) - ...
+                                         output.best_individuals(algorithm) )) <= options.TolX
                                  counter = counter + 1;
-                             else counter = 0;
+                             else
+                                 counter = 0;
                              end
                          end % if
 
@@ -906,10 +916,11 @@ function varargout = GODLIKE(funfcn, ...
                          if output.global_best_funval < options.AchieveFunVal
                              if abs(output.previous_global_best_funval - ...
                                      output.global_best_funval) <= options.TolFun && ...
-                                all(abs(output.previous_global_best_individual - ...
-                                     output.global_best_individual)) <= options.TolX
+                                all(abs( output.previous_global_best_individual - ...
+                                         output.global_best_individual )) <= options.TolX
                                  output.descent_counter = output.descent_counter + 1;
-                             else output.descent_counter = 0;
+                             else
+                                 output.descent_counter = 0;
                              end
                          end % if
 
