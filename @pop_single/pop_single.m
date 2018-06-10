@@ -4,11 +4,9 @@ classdef pop_single < handle
 
 % Please report bugs and inquiries to:
 %
-% Name       : Rody P.S. Oldenhuis
-% E-mail     : oldenhuis@gmail.com    (personal)
-%              oldenhuis@luxspace.lu  (professional)
-% Affiliation: LuxSpace sàrl
-% Licence    : BSD
+% Name    : Rody P.S. Oldenhuis
+% E-mail  : oldenhuis@gmail.com
+% Licence : 2-clause BSD (See License.txt)
 
 
 % If you find this work useful, please consider a donation:
@@ -30,8 +28,8 @@ classdef pop_single < handle
         options            % options structure (see function [set_options] for info)
         pop_data           % structure to store intermediate data
         eq_indices         % those indices of LU and UB, for which their values are equal
-        eq_values          % the corresponding equal values         
-        trans_individuals  % transformed individuals 
+        eq_values          % the corresponding equal values
+        trans_individuals  % transformed individuals
                            % (sine transformed and without the equal
                            % values)
         % contents for single-objective optimization:
@@ -69,11 +67,11 @@ classdef pop_single < handle
 
     % % protected/hidden methods
     methods (Access = protected, Hidden)
-        
-        % wrapper function which includes the equal-valued, and 
+
+        % wrapper function which includes the equal-valued, and
         % applies the sine-transformation
         transformed_individuals = wrapperFcn(pop, input_population, sites);
-        
+
         % compute penalties and insert constraint violations in pop_data
         % (used for constrained optimizations)
         funvals = penalize(pop, funvals, convals, sites);

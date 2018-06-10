@@ -107,10 +107,9 @@ function varargout = GODLIKE(funfcn, ...
 
 % Please report bugs and inquiries to:
 %
-% Name       : Rody P.S. Oldenhuis
-% E-mail     : oldenhuis@gmail.com    (personal)
-% Affiliation: LuxSpace sarl
-% Licence    : BSD
+% Name    : Rody P.S. Oldenhuis
+% E-mail  : oldenhuis@gmail.com
+% Licence : 2-clause BSD (See License.txt)
 
 
 % If you find this work useful, please consider a donation:
@@ -126,17 +125,17 @@ function varargout = GODLIKE(funfcn, ...
     %% Initialize
     % ==========================================================================
 
-    % Check I/O arg counts 
+    % Check I/O arg counts
     % NOTE: (Rody Oldenhuis) R2011b introduced different argcheck mechanism
-    % The following trainwreck is the only way to maintain this basic 
-    % functionality, while addressing ALL related warnings in ALL versions 
+    % The following trainwreck is the only way to maintain this basic
+    % functionality, while addressing ALL related warnings in ALL versions
     % of MATLAB.
     if verLessThan('MATLAB', '7.13')
         error(   nargchk(3,inf,nargin ,'struct')); %#ok<*NCHKN>
-        error(nargoutchk(0,6,nargout,'struct'));   %#ok<*NCHKE>       
+        error(nargoutchk(0,6,nargout,'struct'));   %#ok<*NCHKE>
     else
         narginchk(3,inf);
-        nargoutchk(0,6);   
+        nargoutchk(0,6);
     end
 
     % more elaborate check on input (nested function)
@@ -832,7 +831,7 @@ function varargout = GODLIKE(funfcn, ...
              % input argument. If given, only the current populations is
              % checked. If  omitted, all populations are checked.
              if (nargin == 3)
-                 alg_conv  = true; 
+                 alg_conv  = true;
                  algorithm = algo;
                  counter   = varargin{1};
              else
