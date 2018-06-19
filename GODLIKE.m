@@ -1,19 +1,23 @@
 function varargout = GODLIKE(funfcn, ...
                              lb, ub, ...
                              varargin)
-% GODLIKE           Global optimizer that combines the power
-%                   of a Genetic Algorithm, Diffential Evolution,
-%                   Particle Swarm Optimization and Adaptive
-%                   Simulated Annealing algorithms.
+% GODLIKE              Global optimizer combining the power of a 
+%                      - Genetic algorithm
+%                      - Diffential Evolution algorithm
+%                      - Particle Swarm Optimization algorithm
+%                      - Adaptive Simulated Annealing algorithm
 %
 % Usage:
 %
 % (Single-objective optimization)
 %================================
 %   sol = GODLIKE(obj_fun, lb, ub)
-%   sol = GODLIKE(..., ub, confcn)
-%   sol = GODLIKE(..., confcn, options)
-%   sol = GODLIKE(..., confcn, 'option', value, ...)
+%   sol = GODLIKE(..., ub, A,b)
+%   sol = GODLIKE(..., b, Aeq,beq)
+%   sol = GODLIKE(..., beq, confcn)
+%   sol = GODLIKE(..., confcn, intcon)
+%   sol = GODLIKE(..., intcon, options)
+%   sol = GODLIKE(..., intcon, 'option', value, ...)
 %
 %   [sol, fval] = GODLIKE(...)
 %   [sol, fval, exitflag] = GODLIKE(...)
@@ -22,10 +26,8 @@ function varargout = GODLIKE(funfcn, ...
 %
 % (Multi-objective optimization)
 % ==============================
-%   sol = GODLIKE(obj_fun12..., lb, ub)
-%   sol = GODLIKE({obj_fun1, obj_fun2,...}, lb, ub)
-%   sol = GODLIKE(..., ub, confcn, options)
-%   sol = GODLIKE(..., confcn, 'option', value, ...)
+%   sol = GODLIKE(obj_fun12..., lb, ub, ...)
+%   sol = GODLIKE({obj_fun1, obj_fun2,...}, lb, ub, ...)
 %
 %   [sol, fval] = GODLIKE(...)
 %   [..., fval, Pareto_front] = GODLIKE(...)
@@ -61,9 +63,13 @@ function varargout = GODLIKE(funfcn, ...
 %                  dimensions], since the problem's dimensionality is
 %                  derived from it.
 %
+%   A,b            Linear inequality and linear equality constraints, 
+%   Aeq, beq       respectively; not yet fully implemented.
+%
 %   conFcn         Non-linear constraint function(s); not yet fully
 %                  implemented.
 %
+%    intcon        Integer-constrained values; not yet fully implemented.
 %
 %   options/       Sets the options to be used by GODLIKE. Options may
 %   'option',      be a structure created by set_options, or given as
@@ -622,18 +628,30 @@ function varargout = GODLIKE(funfcn, ...
 
         % just initialize populations if this is the first iteration
         if (generation == 1)
+            
             for ii = 1:number_of_algorithms
-                % set algorithm for this iteration
+                
                 options.algorithm = which_ones{ii};
-                % initialize population
+                
                 if single
-                    pop{ii} = popSingle(funfcn, frac_popsize(ii), lb, ub, sze, dimensions, options);
+                    pop{ii} = popSingle(funfcn,...
+                                        frac_popsize(ii),...
+                                        lb, ub,...
+                                        sze,...
+                                        dimensions,...
+                                        options);
                 else
-                    pop{ii} = popMulti(funfcn, frac_popsize(ii), lb, ub, sze, dimensions, options);
+                    pop{ii} = popMulti(funfcn,...
+                                       frac_popsize(ii),...
+                                       lb, ub,...
+                                       sze,...
+                                       dimensions,...
+                                       options);
                 end
-            end
-            % we're done
-            return
+            end  
+            
+            return;
+            
         end
 
         % don't shuffle if there's only one algorithm
@@ -645,8 +663,9 @@ function varargout = GODLIKE(funfcn, ...
         parent_fits    = zeros(total_popsize, options.num_objectives);
         offspring_pops = parent_pops;
         offspring_fits = parent_fits;
+        
         if multi
-            front_numbers      = zeros(total_popsize, 1);
+            front_numbers = zeros(total_popsize, 1);
 
             %crowding_distances = [front_numbers;front_numbers];
             %{
@@ -669,14 +688,16 @@ function varargout = GODLIKE(funfcn, ...
             end
 
         end
+        
         if constrained
             parent_constrviolation     = zeros(popsize, numel(confcn));
             parent_unpenalized_fits    = zeros(popsize, options.num_objectives);
             offspring_constrviolation  = parent_constrviolation;
             offspring_unpenalized_fits = parent_unpenalized_fits;
         end
+        
         lfe1 = 0;
-        lfe2 = 0;    % Last Filled Entry (lfe)
+        lfe2 = 0; % Last Filled Entry (lfe)
 
         % extract all current populations, their function values,
         % and other relevant information
@@ -695,9 +716,6 @@ function varargout = GODLIKE(funfcn, ...
             if multi
                 front_numbers(lfe1+1:lfe1+popsz, :)        = popinfo.front_number;
 
-                % BUGFIX: (2016/October/25, CG)
-                %crowding_distances(lfe2+1:lfe2+2*popsz, :) = popinfo.crowding_distance;
-                %if (generation == 2)
                 if (pop{ii}.iterations == 1)
                     multisize = popsz;
                 else
@@ -735,6 +753,7 @@ function varargout = GODLIKE(funfcn, ...
             new_popinfo.function_values_parent    = parent_fits(1:fp, :);
             new_popinfo.offspring_population      = offspring_pops(1:fp, :);
             new_popinfo.function_values_offspring = offspring_fits(1:fp, :);
+            
             if multi
                 new_popinfo.front_number      = front_numbers(1:fp, :);
                 new_popinfo.crowding_distance = crowding_distances(1:fp, :);
@@ -754,13 +773,14 @@ function varargout = GODLIKE(funfcn, ...
             % shrink arrays (using "... = [];" for deletion is rather slow)
             parent_pops = parent_pops(fp+1:end,:);  offspring_pops = offspring_pops(fp+1:end,:);
             parent_fits = parent_fits(fp+1:end,:);  offspring_fits = offspring_fits(fp+1:end,:);
+            
             if multi
                 front_numbers      = front_numbers(fp+1:end,:);
                 crowding_distances = crowding_distances(fp+1:end,:);
-            end % if
+            end
 
-        end % for
-    end % nested function
+        end 
+    end 
 
     % update output values, and check for convergence
     function [converged,...
@@ -823,7 +843,7 @@ function varargout = GODLIKE(funfcn, ...
              end
 
              % we're done!
-             return
+             return;
 
          % otherwise, update according to the current status of [pops]
          else
@@ -850,6 +870,7 @@ function varargout = GODLIKE(funfcn, ...
 
              % convergence might already have occured. Determine the reason
              if converged
+                 
                  % maximum function evaluations have been exceeded.
                  if (num_funevaluations >= options.MaxFunEvals)
                      output.exitflag = -1;
@@ -857,14 +878,16 @@ function varargout = GODLIKE(funfcn, ...
                          ' Maximum amount of function evaluations has been reached.\n',...
                          ' Increase ''MaxFunEvals'' option.']);
                  end
+                 
                  % maximum allowable iterations have been exceeded.
                  if (generation >= options.MaxIters)
                      output.exitflag = -2;
                      output.message = sprintf(['Optimization terminated:\n',...
                          ' Maximum amount of iterations has been reached.\n',...
                          ' Increase ''MaxIters'' option.']);
-                 end % if
-             end % if
+                 end
+                 
+             end
 
              % stuff specific for single objective optimization
              if single
@@ -881,6 +904,7 @@ function varargout = GODLIKE(funfcn, ...
                      [output.best_funcvalues(ii), ind] = min(pop{ii}.fitnesses);
                      output.best_individuals(ii,:) = pop{ii}.individuals(ind, :);
                  end
+                 
                  % save new global best individual and function value
                  [min_func_val, index] = min(output.best_funcvalues);
                  if (output.global_best_funval > min_func_val)
@@ -893,6 +917,7 @@ function varargout = GODLIKE(funfcn, ...
 
                      % per-algorithm convergence
                      if alg_conv
+                         
                          % update counter
                          if output.best_funcvalues(algorithm) < options.AchieveFunVal
                              if abs(output.previous_best_funcvalues(algorithm) - ...
@@ -930,8 +955,8 @@ function varargout = GODLIKE(funfcn, ...
                          % convergence has been achieved
                          if generation > options.MinIters && (output.descent_counter > 2)
                              converged = true;
-                         end % if
-                     end % if
+                         end 
+                     end
 
                      % finalize output
                      if converged && ~alg_conv
@@ -949,14 +974,15 @@ function varargout = GODLIKE(funfcn, ...
                                                    ' in function value was less than OPTIONS.TolFun for two consecutive\n',...
                                                    ' GODLIKE-iterations. GODLIKE algorithm converged without any problems.']);
                      end
-                 end % if
-             end % if
+                 end 
+             end
 
              % stuff specific for multi-objective optimization
              if multi
 
                  % check convergence
                  if ~converged
+                     
                      % see if the minimum amount of iterations has
                      % been performed yet
                      if generation > options.MinIters
@@ -977,9 +1003,9 @@ function varargout = GODLIKE(funfcn, ...
                              output.message = sprintf(['Optimization terminated:\n',...
                                                        'All trial solutions of all selected algorithms are non-dominated.\n',...
                                                        'GODLIKE algorithm converged without any problems.']);
-                         end % if (converged)
-                     end % if (MinIters check)
-                 end % if ~converged
+                         end 
+                     end 
+                 end 
 
                  % if converged, complete output structure
                  if converged
@@ -1002,10 +1028,11 @@ function varargout = GODLIKE(funfcn, ...
 
                      output.most_efficient_point     = output.pareto_front_individuals(index, :);
                      output.most_efficient_fitnesses = output.pareto_front_fitnesses(index, :);
-                 end % if converged
-             end % if multi
-         end % if
-    end % nested function
+                 end 
+             end 
+         end 
+         
+    end 
 
 
     % form the proper [x] and [optimValues] for output functions
@@ -1113,8 +1140,7 @@ function varargout = GODLIKE(funfcn, ...
         most_efficient_point     = non_dominated(index, :);
         most_efficient_fitnesses = non_dominated_fits(index, :);
 
-    end % get Paretos
-
+    end 
 
     % display the algorithm's progress
     function display_progress()
@@ -1163,243 +1189,5 @@ function varargout = GODLIKE(funfcn, ...
         end % if
     end % nested function
 
-end % function GODLIKE
+end 
 
-
-% reshape, resize and redefine input to predictable formats
-function [lb,...
-          ub,...
-          sze,...
-          popsize,...
-          dimensions,...
-          confcn,...
-          constrained,...
-          which_ones,...
-          options] = reformat_input(lb,ub,...
-                                    varargin)
-
-    % set options
-    if nargin <= 3, options = set_options; end                   % defaults
-    if nargin == 4, options = varargin{2}; end                   % structure provided
-    if nargin > 4 , options = set_options(varargin{2:end}); end  % individually provided
-
-    % cast output functions to cell
-    if isfield(options, 'OutputFcn') &&...
-            isa(options.OutputFcn, 'function_handle')
-        options.OutputFcn = {options.OutputFcn};
-    end
-
-    % constraint functions
-    if nargin == 2 || isempty(varargin{1}) % default - no constraint function
-
-        confcn      = {[]};
-        constrained = false;
-
-        % constraint might also be calculated inside the objective
-        % function(s)
-        if options.ConstraintsInObjectiveFunction > 0
-            constrained = true; end
-
-    else
-        confcn      = varargin{1};
-        constrained = true;
-
-        % cast to cell if only one is selected
-        if isa(confcn, 'function_handle')
-            confcn = {confcn}; end
-
-        % possible erroneous input
-        if ~iscell(confcn)
-            error([mfilename ':confcn_mustbe_cell_or_funhandle'], [...
-                  'Constraint functions must be given as a fuction_handle, ',...
-                  'or as a cell array of function_handles.']);
-        end
-        % FURTHER CHECKING WILL BE DONE IN TEST_FUNFCN()
-    end
-
-    % extract which algorithms to use
-    which_ones = options.algorithms(:);
-
-    % save the original size of [lb] or [ub]
-    max_elements = max(numel(lb),numel(ub));
-    if (max_elements == numel(lb))
-        sze = size(lb);
-    else
-        sze = size(ub);
-    end
-
-    % force [lb] and [ub] to be row vectors
-    lb = lb(:).';
-    ub = ub(:).';
-
-    % replicate one or the other when their sizes are not equal
-    if ~all(size(lb) == size(ub))
-        if     isscalar(lb)
-            lb = repmat(lb, size(ub));
-        elseif isscalar(ub)
-            ub = repmat(ub, size(lb));
-        else
-            error([mfilename ':lbub_sizes_incorrect'], [...
-                  'If the size of either [lb] or [ub] is equal to the problem''s dimenions\n',...
-                  'the size of the other must be 1x1.'])
-        end
-    end
-
-    % define [dimensions]
-    dimensions = numel(lb);
-
-    % total population size
-    % (defaults to 25*number of dimensions)
-    if isempty(options.GODLIKE.popsize)
-        popsize = min(25*dimensions, 1500);
-    else
-        popsize = options.GODLIKE.popsize;
-    end
-
-    % check minimum popsize
-    minpop = 5*numel(options.algorithms);
-    if any(minpop > popsize)
-        warning([mfilename ':popsize_too_small'], [...
-                'Each algorithm requires a population size of at least 5.\n',...
-                'Given value for [popsize] makes this impossible. Increasing\n',...
-                'argument [popsize] to ', num2str(minpop), '...']);
-        popsize(minpop > popsize) = minpop;
-    end
-
-    % Assign back for consistency
-    options.GODLIKE.popsize = popsize;
-
-end  % subfunction
-
-% elaborate error trapping
-function check_initial_input(funfcn,...
-                             lb,...
-                             ub, ...
-                             varargin)
-
-    if isempty(funfcn)
-        error([mfilename ':function_not_defined'],...
-              'GODLIKE requires at least one objective function.');
-    end
-    if isempty(lb) || isempty(ub)
-        error([mfilename ':lbub_not_defined'],...
-              'GODLIKE requires arguments [lb], [ub].');
-    end
-    if ~isnumeric(lb) || ~isnumeric(ub)
-        error([mfilename ':lbubpopsize_not_numeric'],...
-              'Arguments [lb] and [ub] must be numeric.');
-    end
-    if any(~isfinite(lb)) || any(~isfinite(ub)) || ...
-            any(  ~isreal(lb)) || any(~isreal(ub))
-        error([mfilename ':lbub_not_finite'],...
-              'Values for [lb] and [ub] must be real and finite.');
-    end
-    if ~isvector(lb) || ~isvector(ub)
-        error([mfilename ':lbub_mustbe_vector'],...
-              'Arguments [lb] and [ub] must be given as vectors.');
-    end
-    if ~isa(funfcn, 'function_handle')
-        % might be cell array
-        if iscell(funfcn)
-            for ii = 1:numel(funfcn)
-                if ~isa(funfcn{ii}, 'function_handle')
-                    error([mfilename ':funfcn_mustbe_function_handle'],...
-                          'All objective functions must be function handles.');
-                end
-            end
-        % otherwise, must be function handle
-        else
-            error([mfilename ':funfcn_mustbe_function_handle'],...
-                  'Objective function must be given as a function handle.');
-        end
-    end
-    if (nargin == 5) && ~isstruct(varargin{2})
-        error([mfilename ':options_mustbe_structure'],...
-              'Argument [options] must be a structure.')
-    end
-    if any(lb > ub)
-        error([mfilename ':lb_larger_than_ub'], [...
-              'All entries in [lb] must be smaller than the corresponding ',...
-              'entries in [ub].']);
-    end
-end % subfunction
-
-function options = check_parsed_input(argoutc, ...
-                                      single,...
-                                      multi,...
-                                      popsize,...
-                                      dimensions,...
-                                      which_ones,...
-                                      options)
-
-    assert(all( 5*numel(which_ones) <= popsize ),...
-           [mfilename ':popsize_too_small'], [...
-           'Each algorithm requires a population size of at least 5.\n',...
-           'Given value for [popsize] makes this impossible. Increase\n',...
-           'option [popsize] to at least %d.'],...
-           5*numel(which_ones));
-
-    if numel(popsize) > 1
-        assert(numel(popsize) == dimensions,...
-               [mfilename ':popsize_invalid_dimensions'], [...
-               'When specifying [popsize] as an array, the dimensions of that ',...
-               'array should correspond to the number of algorithms used.']);
-
-    end
-
-    if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
-        warning([mfilename ':ItersLb_exceeds_ItersUb'], [...
-                'Value of options.GODLIKE.ItersLb is larger than value of\n',...
-                'options.GODLIKE.ItersUb. Values will simply be swapped.']);
-        u_b = options.GODLIKE.ItersUb;
-        options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
-        options.GODLIKE.ItersLb = u_b;
-    end
-
-    if (options.MinIters  > options.MaxIters)
-        warning([mfilename ':MaxIters_exceeds_MinIters'], [...
-                'Value of options.MinIters is larger than value of\n',...
-                'options.MaxIters. Values will simply be swapped.']);
-        u_b = options.MaxIters;
-        options.MaxIters = options.MinIters;
-        options.MinIters = u_b;
-    end
-
-    if single
-        % single objective optimization has a maximum of 4 output arguments
-        if verLessThan('MATLAB', '8.6')
-            error(nargoutchk(0, 4, argoutc, 'struct'));
-        else
-            nargoutchk(0, 4);
-        end
-    elseif multi
-        % multi-objective optimization has a maximum of 6 output arguments
-        if verLessThan('MATLAB', '8.6')
-            error(nargoutchk(0, 6, argoutc, 'struct'));
-        else
-            nargoutchk(0, 6);
-        end
-    end
-
-    if ~isempty(options.OutputFcn) && ...
-       ~all( cellfun(@(x) isa(x, 'function_handle'), options.OutputFcn))
-        error([mfilename ':outputFcn_shouldbe_function_handle'],...
-              'All output functions should be function handles.')
-    end
-
-    if strcmpi(options.display, 'plot') && single && dimensions > 2
-        warning([mfilename ':plotting_not_possible'], [...
-                'Display type was set to ''Plot'', but the number of\n',...
-                'decision variables exceeds 2. The search space can note be\n',...
-                'displayed. Set options.display to ''off'' or ''on'' to \n',...
-                '''on'' to supress this message.'])
-    end
-
-    if strcmpi(options.display, 'plot') && multi && options.num_objectives > 3
-        warning([mfilename ':plotting_not_possible'], [...
-                'Display type was set to ''Plot'', but the number of\n',...
-                'objective functions exceeds 3. The Pareto front can \n',...
-                'not be displayed. Set options.display to ''off'' or \n',...
-                '''on'' to supress this message.'])
-    end
-end % subfunction

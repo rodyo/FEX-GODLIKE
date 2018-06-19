@@ -1,19 +1,14 @@
-% NOTE: evalutating an obj_function() object, means you're passing it the
+% NOTE: evalutating an objFunction() object, means you're passing it the
 % TRANSFORMED X, which the class will UNTRANSFORM before evaluation. After
 % convergence of the algorithm you're using it with, use
-% get_real_X(solution_X) to get the UNTRANSFORMED values, and use 
+% getRealX(solution_X) to get the UNTRANSFORMED values, and use 
 % obj.true_Y_at_last_evaluation to get the unpenalized function value
 
 classdef objFunction < handle
-
-    % Suppress silly things 
-    %#ok<*VANUS>
-    %#ok<*AGROW>
     
     %% Properties
-    % ==========================================================================
-        
-    properties (SetAccess = private)
+            
+    properties (SetAccess = immutable)
 
         % The actual function
         funfcn = @(X)X
@@ -30,6 +25,10 @@ classdef objFunction < handle
         
         % flags & parameters
         tolCon = 1e-6;
+        
+    end
+        
+    properties (SetAccess = private)
         
         % Variables
         objfcn_evaluations = 0        
@@ -294,7 +293,6 @@ classdef objFunction < handle
             
             % Check that given parameter is a boolean
             function L = check_logical(L, parameter_name)
-                
                 if ischar(L)
                     switch lower(L)
                         case {'no' 'off' 'none' 'nope' 'false' 'n'}
@@ -324,7 +322,8 @@ classdef objFunction < handle
             end
             
             % Check & clean up linear (in)equatlity constraints
-            function [M,v] = prepare_linear_constraints(M,v, constraint_type)
+            function [M,v] = prepare_linear_constraints(M,v,...
+                                                        constraint_type)
                 
                 if ~isempty(M)
                     
@@ -391,17 +390,17 @@ classdef objFunction < handle
             end            
             
             % Check LB/UB and A/Aeq consistency
-            function [M,v] = check_bound_vs_linear_constraints(M,v, constraint_type)
+            function [M,v] = check_bound_vs_linear_constraints(M,v,...
+                                                               constraint_type)
                 
                 if ~isempty(M)
                     
-                    removals = [];
-
                     % Detect bound constraints hidden in the linear 
                     % (in)equalities. Move them to the bounds if they are
                     % consistent. 
                     
                     warning_issued = false;
+                    removals       = false(size(M,1),1);
                     for ii = 1:size(M,1)
 
                         Arow = M(ii,:);
@@ -447,7 +446,7 @@ classdef objFunction < handle
                                     obj.ub(ii) = brow;
                             end
                             
-                            removals = [removals; ii];
+                            removals(ii) = true;
                             
                         end
                     end
@@ -472,7 +471,25 @@ classdef objFunction < handle
     end
     
     % Operator overloads
-    methods
+    methods       
+        
+        % Overload subsref, not for indexing, but for evaluation
+        function varargout = subsref(obj, X)
+            if numel(X)==1 && strcmp(X.type, '()')
+                varargout{1} = obj.evaluate(X.subs{:});
+            else
+                try
+                    [varargout{1:nargout}] = builtin('subsref', obj, X);
+                catch ME
+                    throwAsCaller(ME);
+                end
+            end
+        end
+
+        % Overload feval, for old algorithms still using that
+        function varargout = feval(obj, X)
+            varargout{1} = obj.evaluate(X);
+        end
         
     end
     
@@ -547,28 +564,7 @@ classdef objFunction < handle
                     feas{ (ineq && eqc && ubnd && lbnd && nlc && nlceq && intc) + 1});
             
         end
-                
-        % Overloads
-        % ======================================================================
-        
-        % Overload subsref, not for indexing, but for evaluation
-        function varargout = subsref(obj, X)
-            if numel(X)==1 && strcmp(X.type, '()')
-                varargout{1} = obj.evaluate(X.subs{:});
-            else
-                try
-                    [varargout{1:nargout}] = builtin('subsref', obj, X);
-                catch ME
-                    throwAsCaller(ME);
-                end
-            end
-        end
-
-        % Overload feval, for old algorithms still using that
-        function varargout = feval(obj, X)
-            varargout{1} = obj.evaluate(X);
-        end
-                
+               
     end
 
     
