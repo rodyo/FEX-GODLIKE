@@ -11,7 +11,7 @@ function pop = constructPop(pop, varargin)
 
     % input is ( new [pop_data] structure, previous [population] object, options )
     % (subsequent call from GODLIKE)
-    % = = = = = = = = = = = = = = = = = = = = = = = = = =
+    % = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
     if (argc == 3)
 
@@ -41,17 +41,16 @@ function pop = constructPop(pop, varargin)
 
         % Some algorithms need some lengthier initializing
         pop.initializeAlgorithms();
-
         
         return;
     end
 
     % input is ( funfcn, popsize, lb, ub, dimensions, options )
     % (initialization call from GODLIKE)
-    % = = = = = = = = = = = = = = = = = = = = = = = = = =
+    % = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
     % parse input
-    % - - - - - - - - - - - - - - - - - - - - - - - - - -
+    % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
     % assign input
     pop.funfcn  = varargin{1};   pop.ub         = varargin{4};
@@ -70,7 +69,7 @@ function pop = constructPop(pop, varargin)
     pop.algorithm = pop.options.algorithm;
 
     % Initialize population
-    % - - - - - - - - - - - - - - - - - - - - - - - - - -
+    % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
     % initialize population
     pop.individuals = pop.lb + rand(pop.size, pop.dimensions) .* (pop.ub-pop.lb);

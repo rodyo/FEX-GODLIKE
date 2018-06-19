@@ -4,7 +4,7 @@
 % get_real_X(solution_X) to get the UNTRANSFORMED values, and use 
 % obj.true_Y_at_last_evaluation to get the unpenalized function value
 
-classdef obj_function < handle
+classdef objFunction < handle
 
     % Suppress silly things 
     %#ok<*VANUS>
@@ -12,8 +12,7 @@ classdef obj_function < handle
     
     %% Properties
     % ==========================================================================
-    
-    % Properties which can be viewed, but only set upon object construction
+        
     properties (SetAccess = private)
 
         % The actual function
@@ -51,7 +50,6 @@ classdef obj_function < handle
         
     end
     
-    % Properties purely for internal use
     properties (Hidden, Access = private)
         
         % Flags
@@ -77,17 +75,13 @@ classdef obj_function < handle
     end
     
     
-    %% Methods
-    % ==========================================================================
+    %% Methods    
 
-    % Public methods
+    % Class basics
     methods
         
-        % Class basics
-        % ======================================================================
-        
         % Constructor
-        function obj = obj_function(varargin)
+        function obj = objFunction(varargin)
 
             
             % Initialize
@@ -113,7 +107,8 @@ classdef obj_function < handle
                 switch lower(parameter)
 
                     % The objective function
-                    case {'function' 'fcn' 'funfcn' 'objective_function' 'cost_function' 'objective' 'cost'}
+                    case {'function' 'fcn' 'funfcn' 'objective_function',...
+                          'cost_function' 'objective' 'cost'}
                         
                         assert(isa(value, 'function_handle'),...
                                [mfilename('class') ':objective_function_type_error'],...
@@ -474,22 +469,33 @@ classdef obj_function < handle
             
         end
         
+    end
+    
+    % Operator overloads
+    methods
+        
+    end
+    
+    % Public functionality
+    methods
+        
         % Public accessors; less technically names versions of the private
         % functions below
-        function X = get_real_X(obj, X_T)
+        function X = getRealX(obj, X_T)
             X = obj.untransform_X(X_T);
         end
         
-        function X_T = get_fake_X(obj, X)
+        function X_T = getFakeX(obj, X)
             X_T = obj.transform_X(X);
         end
-
         
-        % Manual evaluation 
-        % ======================================================================
+    end
+    
+    % Manual evaluation (for debugging purposes only, hence "hidden"
+    methods(Hidden)
         
         % Direct evaluation of function; for debugging purposes        
-        function Y = evaluate_directly(obj, X)
+        function Y = evaluateDirectly(obj, X)
             
             %assert() % numeric, etc. 
             %assert() % A and X have size mismatch, etc.
@@ -568,14 +574,11 @@ classdef obj_function < handle
     
     % Methods for internal use
     methods (Access = private)
-              
-        % Evaluate function 
-        % ======================================================================
         
-        % Transformed (including automatic penalties)
+        % Evaluate transformed function & apply penalties
         function Y = evaluate(obj, X_T)
             
-            X = obj.untransform_X(X_T);
+            X = obj.untransformX(X_T);
             Y = obj.funfcnP(X);
             
             % Bookkeeping
@@ -583,6 +586,7 @@ classdef obj_function < handle
             obj.transformed_X_at_last_evaluation = X_T;
             obj.transformed_Y_at_last_evaluation = Y;  
             obj.has_been_evaluated               = true;
+            
         end
         
         
@@ -591,21 +595,23 @@ classdef obj_function < handle
         
         % Transform possibly-constrained decision variable to its 
         % unconstrained counterpart
-        function X = transform_X(obj, Z, varargin)
+        function X = transformX(obj, Z, varargin)
             
-            X = Z(:);                                                              % fixed and unconstrained variables   
+            X = Z(:);                                                              
             
-            X(obj.lb_only) = sqrt(     Z(obj.lb_only) - obj.lb(obj.lb_only));      % lower bounds only   
-            X(obj.ub_only) = sqrt(obj.ub(obj.ub_only) -      Z(obj.ub_only));      % upper bounds only
+            X(obj.lb_only) = sqrt(     Z(obj.lb_only) - obj.lb(obj.lb_only));      
+            X(obj.ub_only) = sqrt(obj.ub(obj.ub_only) -      Z(obj.ub_only));      
             X(obj.lb_ub)   = real( asin( 2*(Z(obj.lb_ub) - obj.lb(obj.lb_ub))./ ...
-                                   (obj.ub(obj.lb_ub) - obj.lb(obj.lb_ub)) - 1) ); % both upper and lower bounds
+                                   (obj.ub(obj.lb_ub) - obj.lb(obj.lb_ub)) - 1) ); 
+                               
+            % Fix any unconstrained variables   
             X(obj.fix_var) = [];
             
         end
         
         % Transform unconstrained decision variable to its
         % possibly-constrained counterpart
-        function Z = untransform_X(obj, X, varargin)
+        function Z = untransformX(obj, X, varargin)
             
             % NOTE: if the bounds are not set, the size of X will not change
             if isempty(obj.original_X_size)
@@ -769,7 +775,7 @@ classdef obj_function < handle
             end % Penalize
 
 
-        end % funfcnP()
+        end 
 
     end
 

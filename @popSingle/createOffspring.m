@@ -390,15 +390,3 @@ function createOffspring(pop, pool, times, FE)
 
 end 
 
-
-
-
-
-
-
-
-
-
-
-
-

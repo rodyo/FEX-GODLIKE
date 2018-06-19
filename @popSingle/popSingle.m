@@ -33,15 +33,15 @@ classdef popSingle < handle
         trans_individuals  % transformed individuals
                            % (sine transformed and without the equal
                            % values)
-        % contents for single-objective optimization:
-        %      pop_data.parent_population
-        %      pop_data.offspring_population
-        %      pop_data.function_values_parent
-        %      pop_data.function_values_offspring
-        %      pop_data.unpenalized_function_values_parent     (for constrained optimization)
-        %      pop_data.unpenalized_function_values_offspring  (for constrained optimization)
-        %      pop_data.constraint_violations_parent           (for constrained optimization)
-        %      pop_data.constraint_violations_offspring        (for constrained optimization)
+        % contents of pop_data for single-objective optimization:
+        % .parent_population
+        % .offspring_population
+        % .function_values_parent
+        % .function_values_offspring
+        % .unpenalized_function_values_parent     (for constrained optimization)
+        % .unpenalized_function_values_offspring  (for constrained optimization)
+        % .constraint_violations_parent           (for constrained optimization)
+        % .constraint_violations_offspring        (for constrained optimization)
     end
 
     %% Methods
