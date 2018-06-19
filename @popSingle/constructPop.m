@@ -1,8 +1,13 @@
-function pop = construct_pop(pop, varargin)
+function pop = constructPop(pop, varargin)
 
     % nargin check
-    argc = nargin - 1;    
-    error(nargchk(2, 7, argc, 'struct'));
+    argc = nargin - 1;        
+    if verLessThan('MATLAB', '8.3')
+        error(nargchk   (2,7,argc   ,'struct')); %#ok<*NCHKN>
+        error(nargoutchk(0,1,nargout,'struct')); %#ok<*NCHKE>
+    else
+        narginchk(3,8);        
+    end
 
     % input is ( new [pop_data] structure, previous [population] object, options )
     % (subsequent call from GODLIKE)
@@ -35,7 +40,7 @@ function pop = construct_pop(pop, varargin)
         pop.ub = repmat(pop.ub(1, :), pop.size, 1);
 
         % Some algorithms need some lengthier initializing
-        pop.initialize_algorithms();
+        pop.initializeAlgorithms();
 
         
         return;
@@ -78,7 +83,7 @@ function pop = construct_pop(pop, varargin)
     pop.pop_data.offspring_population      = pop.individuals;
 
     % evaluate function for initial population (parents only)
-    pop.evaluate_function();
+    pop.evaluateFunction();
 
     % copy function values into fitnesses properties
     pop.fitnesses = pop.pop_data.function_values_offspring;
@@ -88,6 +93,6 @@ function pop = construct_pop(pop, varargin)
     pop.pop_data.function_values_offspring = [];
 
     % some algorithms need some lengthier initializing
-    pop.initialize_algorithms();
+    pop.initializeAlgorithms();
 
 end

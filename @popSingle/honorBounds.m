@@ -1,4 +1,4 @@
-function [newpop, newfit] = honor_bounds(pop, newpop, newfit)
+function [newpop, newfit] = honorBounds(pop, newpop, newfit)
 
     % find violation sites
     outsiders1 = false; outsiders2 = false;
@@ -46,5 +46,6 @@ function [newpop, newfit] = honor_bounds(pop, newpop, newfit)
             newfit(any(outsiders1,2), :) = NaN;
             newfit(any(outsiders2,2), :) = NaN;
         end
-    end % if
-end % function
+    end
+
+end

@@ -1,4 +1,4 @@
-function evaluate_function(pop)
+function evaluateFunction(pop)
 
     % multi-objective optimization overloads this function for
     % some initialization, but returns here later.
@@ -37,40 +37,6 @@ function evaluate_function(pop)
     % NOTE: count each function call as one, even though it may return
     % multiple objectives.
     pop.funevals = pop.funevals + num_pop*numel(pop.funfcn);
-
-    %{
-    % REPLACES THIS:
-
-    % first convert population to cell
-    true_pop = reshape(pop.pop_data.offspring_population(sites, :).', ...
-        [pop.orig_size,nnz(sites)]);
-    % NOTE: for-loop is faster than MAT2CELL
-    cell_pop = cell(1,1,nnz(sites));
-    for ii = 1:size(true_pop,3)
-        cell_pop{1,1,ii} = true_pop(:,:,ii); end
-
-    % then evaluate all functions with cellfun
-    if pop.options.obj_columns
-        % if multi-objectives returned as column vector by single
-        % function, cellfun doesn't work directly - CG
-        pop.pop_data.function_values_offspring(sites, :) = permute(cell2mat(cellfun(pop.funfcn{1},...
-                                                                                    cell_pop, ...
-                                                                                    'UniformOutput', false)...
-                                                                            ),...
-                                                                   [3 2 1]
-                                                                   );
-    else
-        % otherwise use cellfun directly - CG
-        % TODO: without preallocation, this will be slow
-        for ii = 1:numel(pop.funfcn)
-            pop.pop_data.function_values_offspring(sites, ii) = cellfun(pop.funfcn{ii}, ...
-                                                                        cell_pop);
-        end
-    end
-    % update number of function evaluations
-    pop.funevals = pop.funevals + ...
-        nnz(sites) * size(pop.pop_data.function_values_offspring, 2);
-    %}
 
 end % method
 

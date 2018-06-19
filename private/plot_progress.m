@@ -127,7 +127,7 @@ function plot_progress(loop_index,...
     end
 
     % Do not delay plotting
-    drawnow
+    drawnow('limitrate', 'nocallbacks')
 
     % Prepare for next optimization
     previous_legend_entries = legend_entries;
@@ -284,8 +284,8 @@ function [ghandles,...
             elseif two_dimensional
 
                 if initial_draw
-                    xlabel('x_1')
-                    ylabel('x_2')
+                    xlabel('$x_1$', 'Interpreter', 'LaTeX');
+                    ylabel('$x_2$', 'Interpreter', 'LaTeX');
                     zlabel('F(x)')
 
                     view(-45,+10)
@@ -473,3 +473,16 @@ function [ghandles,...
     end
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+

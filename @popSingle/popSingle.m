@@ -1,4 +1,4 @@
-classdef pop_single < handle
+classdef popSingle < handle
 % =insert documentation here=
 
 
@@ -8,9 +8,10 @@ classdef pop_single < handle
 % E-mail  : oldenhuis@gmail.com
 % Licence : 2-clause BSD (See License.txt)
 
-
 % If you find this work useful, please consider a donation:
 % https://www.paypal.me/RodyO/3.5
+
+    %% Properties
 
     % all properties are public
     properties
@@ -43,29 +44,31 @@ classdef pop_single < handle
         %      pop_data.constraint_violations_offspring        (for constrained optimization)
     end
 
-    % public methods
+    %% Methods
+    
+    % Class basics
     methods (Access = public)
 
         % Constructor
-        function pop = pop_single(varargin)
-
+        function pop = popSingle(varargin)
             % (delegate to private method; improves file organisation)
-            pop = pop.construct_pop(varargin{:});
-
-        end % function (constructor)
-
-        % single iteration
-        iterate(pop, times, FE);
-
-
-    end % methods
-
-    methods (Access = private, Hidden)
-        % constructor is sizeable; put it in its own function to keep the classdef small
-        pop = construct_pop(pop, varargin);
+            pop = pop.constructPop(varargin{:});
+        end
+        
     end
 
-    % % protected/hidden methods
+    methods (Access = private, Hidden)
+        % constructor offloaded in separate file
+        pop = constructPop(pop, varargin);
+    end
+    
+    % Public functionality
+    methods        
+        % a single iteration
+        iterate(pop, times, FE);
+    end
+    
+    % Internal methods
     methods (Access = protected, Hidden)
 
         % wrapper function which includes the equal-valued, and
@@ -77,24 +80,32 @@ classdef pop_single < handle
         funvals = penalize(pop, funvals, convals, sites);
 
         % tournament selection (only for GA)
-        pool = tournament_selection(pop, pool_size, tournament_size);
+        pool = tournamentSelection(pop, pool_size, tournament_size);
 
         % generate new generation
-        create_offspring(pop, pool, times, FE);
+        createOffspring(pop, pool, times, FE);
 
         % selectively replace the parent population with members
         % from the offspring population (single-objective optimization)
-        replace_parents(pop);
+        replaceParents(pop);
 
         % evaluate the objective function(s) correctly
-        evaluate_function(pop);
+        evaluateFunction(pop);
 
         % check boundaries
-        [newpop, newfit] = honor_bounds(pop, newpop, newfit);
+        [newpop, newfit] = honorBounds(pop, newpop, newfit);
 
         % initialize algorithms
-        initialize_algorithms(pop);
+        initializeAlgorithms(pop);
 
-    end % methods (protected)
+    end 
 
-end % classdef
+end
+
+
+
+
+
+
+
+

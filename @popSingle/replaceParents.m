@@ -1,4 +1,4 @@
-function replace_parents(pop)
+function replaceParents(pop)
 
     % rename for clarity
     new_fits = pop.pop_data.function_values_offspring;
@@ -84,7 +84,7 @@ function replace_parents(pop)
                 pop.options.PSO.eta3   *r3.*(pop.pop_data.local_best_inds - new_inds);
 
            % check the bounds
-           pop.honor_bounds([]);
+           pop.honorBounds([]);
 
         % Adaptive Simulated Annealing
         case 'ASA' % Adaptive Simulated Annealing
@@ -116,10 +116,21 @@ function replace_parents(pop)
             % also replace the function values
             pop.pop_data.function_values_parent(swapinds, :) = new_fits(swapinds, :);
 
-    end % switch
+    end
 
     % copy individuals and fitnesses to respective properties
     pop.fitnesses   = pop.pop_data.function_values_parent;
     pop.individuals = pop.pop_data.parent_population;
 
-end % function
+end
+
+
+
+
+
+
+
+
+
+
+

@@ -158,11 +158,13 @@ function varargout = GODLIKE(funfcn, ...
 
     % test input objective function(s) to determine the problem's dimensions,
     % number of objectives and proper input format
-    [options, single, multi, test_evaluations] = test_funfcn(options);
+    [options,...
+     single,...
+     multi,...
+     test_evaluations] = test_funfcn(options);
 
     % initialize more variables
-    number_of_algorithms = numel(which_ones);            % number of algorithms to use
-       number_of_streams = options.NumStreams;           % number of simultaneous streams
+    number_of_algorithms = numel(which_ones);            % number of algorithms to use       
               generation = 1;                            % this is the first generation
                      pop = cell(number_of_algorithms,1); % cell array of [population] objects
      num_funevaluations  = 0;                            % number of function evaluations
@@ -223,7 +225,7 @@ function varargout = GODLIKE(funfcn, ...
             % perform algorithm iterations
             if strcmpi(pop{algo}.algorithm, 'MS')
             % Multi-start behaves differently; its needs to
-            % execute its iterations inside pop_single.
+            % execute its iterations inside popSingle.
 
                 % save previous value of number of function evaluations
                 prev_FE = pop{algo}.funevals;
@@ -625,9 +627,9 @@ function varargout = GODLIKE(funfcn, ...
                 options.algorithm = which_ones{ii};
                 % initialize population
                 if single
-                    pop{ii} = pop_single(funfcn, frac_popsize(ii), lb, ub, sze, dimensions, options);
+                    pop{ii} = popSingle(funfcn, frac_popsize(ii), lb, ub, sze, dimensions, options);
                 else
-                    pop{ii} = pop_multi(funfcn, frac_popsize(ii), lb, ub, sze, dimensions, options);
+                    pop{ii} = popMulti(funfcn, frac_popsize(ii), lb, ub, sze, dimensions, options);
                 end
             end
             % we're done
@@ -745,8 +747,8 @@ function varargout = GODLIKE(funfcn, ...
             options.ASA.T0 = options.ASA.T0 / options.ASA.ReHeating / generation;
 
             % re-initialize
-            if single, pop{ii} = pop_single(new_popinfo, pop{ii}, options);
-            else,      pop{ii} = pop_multi (new_popinfo, pop{ii}, options);
+            if single, pop{ii} = popSingle(new_popinfo, pop{ii}, options);
+            else,      pop{ii} = popMulti (new_popinfo, pop{ii}, options);
             end
 
             % shrink arrays (using "... = [];" for deletion is rather slow)
@@ -1366,14 +1368,14 @@ function options = check_parsed_input(argoutc, ...
     if single
         % single objective optimization has a maximum of 4 output arguments
         if verLessThan('MATLAB', '8.6')
-            error(nargoutchk(0, 4, argoutc, 'struct')); %#ok<NCHKE>
+            error(nargoutchk(0, 4, argoutc, 'struct'));
         else
             nargoutchk(0, 4);
         end
     elseif multi
         % multi-objective optimization has a maximum of 6 output arguments
         if verLessThan('MATLAB', '8.6')
-            error(nargoutchk(0, 6, argoutc, 'struct')); %#ok<NCHKE>
+            error(nargoutchk(0, 6, argoutc, 'struct'));
         else
             nargoutchk(0, 6);
         end
