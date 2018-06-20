@@ -1,5 +1,4 @@
-function varargout = GODLIKE(funfcn, ...
-                             lb, ub, ...
+function varargout = GODLIKE(funfcn, ...                             
                              varargin)
 % GODLIKE              Global optimizer combining the power of a 
 %                      - Genetic algorithm
@@ -11,6 +10,7 @@ function varargout = GODLIKE(funfcn, ...
 %
 % (Single-objective optimization)
 %================================
+%   sol = GODLIKE(obj_fun)
 %   sol = GODLIKE(obj_fun, lb, ub)
 %   sol = GODLIKE(..., ub, A,b)
 %   sol = GODLIKE(..., b, Aeq,beq)
@@ -144,11 +144,21 @@ function varargout = GODLIKE(funfcn, ...
         nargoutchk(0,6);
     end
 
-    % more elaborate check on input (nested function)
-    check_initial_input(funfcn,...
-                        lb,...
-                        ub,...
-                        varargin{:});
+    
+    % Get options structure
+    if (nargin >= 10) 
+        if nargin == 10 
+            assert(isstruct(varargin{end}),...
+                   [mfilename ':datatype_error'],...
+                   'Argument [options] must be a structure.');
+        end
+        options = set_options(varargin{10:end});
+    else
+        options = set_options();
+    end
+    
+    %
+    
 
     % resize and reshape boundaries and dimensions
     [lb,...
@@ -206,21 +216,23 @@ function varargout = GODLIKE(funfcn, ...
     while ~converged
 
         % randomize population sizes (minimum is 5 individuals)
-        %frac_popsize = break_value(popsize, 5);
+        %frac_popsize = break_value(popsize, 5, number_of_algorithms);
         % popsize may already give us the divisions into algorithms
         if length(popsize) == number_of_algorithms
             frac_popsize  = popsize;
             total_popsize = sum(popsize);
         else
-            % randomize population sizes (minimum is 5 individuals)
-            frac_popsize  = break_value(popsize, 5);
+            % Randomize population sizes (minimum is 5 individuals)
+            frac_popsize  = break_value(popsize, 5, number_of_algorithms);
             total_popsize = popsize;
         end
 
         % randomize number of iterations per algorithm
         % ([options.GODLIKE.ItersUb] is the maximum TOTAL amount
         % of iterations that will be spent in all of the algorithms combined.)
-        frac_iterations = break_value(options.GODLIKE.ItersUb, options.GODLIKE.ItersLb);
+        frac_iterations = break_value(options.GODLIKE.ItersUb,...
+                                      options.GODLIKE.ItersLb,...
+                                      number_of_algorithms);
 
         % shuffle (or initialize) populations
         pop = interchange_populations(pop);
@@ -579,49 +591,12 @@ function varargout = GODLIKE(funfcn, ...
 
     end % nested function
 
+    
     % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
     % functions used in the main loop
     % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
 
-    % break up some [value] into a vector of random integers
-    % of length [algorithms], that sums up to [value]
-    function frac_value = break_value(value, Lb)
-        % NOTE: The case of these variables [Lb] and [Ub] is important.
-        % The GODLIKE arguments [lb] or [ub] may get overwritten!
-
-        % only one algorithm - just return value
-        if number_of_algorithms == 1
-            frac_value = value;
-            return;
-        end
-
-        % initially, the upper bound is the value minus
-        % (algorithms-1) times the lower bound
-        Ub = value - (number_of_algorithms-1)*Lb;
-
-        % create array of length [algorithms] that
-        % sums to [value]
-        frac_value = zeros(number_of_algorithms, 1);
-        for ii = 1:number_of_algorithms-1 % note the minus one
-
-            % random value (make sure it's not zero)
-            rnd = 0;
-            while (rnd == 0)
-                rnd = round(rand*(Ub-Lb) + Lb); end
-            frac_value(ii) = rnd;
-
-            % adjust max. value for next iteration
-            Ub = round((value - sum(frac_value))/(number_of_algorithms-ii));
-        end % for
-
-        % last entry is the difference of the sum of all values and the original value
-        frac_value(end) = value - sum(frac_value);
-
-        % sort at random
-        [dummy, inds] = sort(rand(size(frac_value,1),1)); %#ok<ASGLU>
-        frac_value = frac_value(inds);
-
-    end % nested function
+    
 
     % shuffle and (re)initialize the population objects
     function pop = interchange_populations(pop)
@@ -704,7 +679,8 @@ function varargout = GODLIKE(funfcn, ...
         for ii = 1:number_of_algorithms
 
             % rename stuff for clarity
-            popinfo = pop{ii}.pop_data;          popsz = pop{ii}.size;
+            popinfo = pop{ii}.pop_data;         
+            popsz   = pop{ii}.size;
 
             % both for single and multi-objective
             parent_pops(lfe1+1:lfe1+popsz, :)  = popinfo.parent_population;
@@ -733,8 +709,11 @@ function varargout = GODLIKE(funfcn, ...
 
         % shuffle everything at random
         [dummy, rndinds] = sort(rand(total_popsize, 1));%#ok<ASGLU>
-        parent_pops = parent_pops(rndinds,:);    offspring_pops = offspring_pops(rndinds,:);
-        parent_fits = parent_fits(rndinds,:);    offspring_fits = offspring_fits(rndinds,:);
+        parent_pops = parent_pops(rndinds,:);    
+        parent_fits = parent_fits(rndinds,:);    
+        
+        offspring_pops = offspring_pops(rndinds,:);
+        offspring_fits = offspring_fits(rndinds,:);
 
         if multi
             [dummy, rndinds2]  = sort(rand(crowding_size, 1));%#ok<ASGLU>
@@ -751,6 +730,7 @@ function varargout = GODLIKE(funfcn, ...
             % split everything up according to current [frac_popsize]
             new_popinfo.parent_population         = parent_pops(1:fp, :);
             new_popinfo.function_values_parent    = parent_fits(1:fp, :);
+            
             new_popinfo.offspring_population      = offspring_pops(1:fp, :);
             new_popinfo.function_values_offspring = offspring_fits(1:fp, :);
             
@@ -771,8 +751,11 @@ function varargout = GODLIKE(funfcn, ...
             end
 
             % shrink arrays (using "... = [];" for deletion is rather slow)
-            parent_pops = parent_pops(fp+1:end,:);  offspring_pops = offspring_pops(fp+1:end,:);
-            parent_fits = parent_fits(fp+1:end,:);  offspring_fits = offspring_fits(fp+1:end,:);
+            parent_pops = parent_pops(fp+1:end,:);  
+            parent_fits = parent_fits(fp+1:end,:);  
+            
+            offspring_pops = offspring_pops(fp+1:end,:);
+            offspring_fits = offspring_fits(fp+1:end,:);
             
             if multi
                 front_numbers      = front_numbers(fp+1:end,:);
@@ -1041,14 +1024,15 @@ function varargout = GODLIKE(funfcn, ...
 
         % collect all the information one could possibly desire
         if ~isempty(algorithm)
-            optimValues.optimizer.algorithm  = pop{algorithm}.algorithm;
-            optimValues.optimizer.funcCount  = pop{algorithm}.funevals;
-            optimValues.optimizer.iterations = pop{algorithm}.iterations;
+            opt.algorithm  = pop{algorithm}.algorithm;
+            opt.funcCount  = pop{algorithm}.funevals;
+            opt.iterations = pop{algorithm}.iterations;
         else
-            optimValues.optimizer.algorithm  = [];
-            optimValues.optimizer.funcCount  = [];
-            optimValues.optimizer.iterations = [];
+            opt.algorithm  = [];
+            opt.funcCount  = [];
+            opt.iterations = [];
         end
+        optimValues.optimizer = opt;
 
         optimValues.algorithm = 'GODLIKE';
         optimValues.funcCount = num_funevaluations;
@@ -1057,12 +1041,14 @@ function varargout = GODLIKE(funfcn, ...
 
         if single
             optimValues.type = 'single-objective';
+            
             if constrained
                 optimValues.best_fval                      = output.global_best_funval_unconstrained;
                 optimValues.best_fval_constraint_violation = output.global_best_funval_constrviolation;
             else
                 optimValues.best_fval = output.global_best_funval;
             end
+            
             x = reshape(output.global_best_individual, sze);
             optimValues.best_individual = x;
 
@@ -1084,7 +1070,9 @@ function varargout = GODLIKE(funfcn, ...
 
             if constrained
                 optimValues.constraint_violations = violations; end
+            
         end
+        
     end
 
     % Get the complete Pareto-front, and the most efficient point

@@ -9,47 +9,52 @@ classdef objFunction < handle
     %% Properties
             
     properties (SetAccess = immutable)
+        
+        % NOTE: (Rody Oldenhuis) property validation functions can't be defined
+        % on immutable properties in versions older than R2017b.
 
         % The actual function
         funfcn = @(X)X
 
         % Its constraints
-        A        = []
-        b        = []
-        Aeq      = []
-        beq      = []
-        lb       = []
-        ub       = []        
-        intcon   = []
-        nonlcon  = {} % TODO: make class out of this as well? 
+        A       = []
+        b       = []
+        Aeq     = []
+        beq     = []
+        lb      = []
+        ub      = []        
+        intcon  = []
+        nonlcon = {} 
         
         % flags & parameters
-        tolCon = 1e-6;
+        tolfun = 1e-6
+        tolcon = 1e-6
+        tolx   = 1e-6
         
     end
         
     properties (SetAccess = private)
         
         % Variables
-        objfcn_evaluations = 0        
-        confcn_evaluations = 0     
+        objfcn_evaluations = 0                       
+        confcn_evaluations = 0
         
-        original_X_size
-        transformed_X_size
+        original_X_size    
+        transformed_X_size 
         
-        true_X_at_last_evaluation
-        true_Y_at_last_evaluation
+        true_X_at_last_evaluation 
+        true_Y_at_last_evaluation 
         
-        transformed_X_at_last_evaluation        
-        transformed_Y_at_last_evaluation  
+        transformed_X_at_last_evaluation 
+        transformed_Y_at_last_evaluation 
 
         % Parameters
-        nonlinear_constraints_from_objective_function = false;
-        number_of_objectives = 1;        
+        nonlinear_constraints_from_objective_function = false
+        number_of_objectives = 1
         
     end
     
-    properties (Hidden, Access = private)
+    properties (Access = private)
         
         % Flags
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -62,14 +67,14 @@ classdef objFunction < handle
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
         
         % Bound constraints
-        nf_lb   = []   % unconstrained towards negative infinity
-        nf_ub   = []   % unconstrained towards positive infinity
-        unconst = []   % unconstrained in both directions
+        nf_lb    % unconstrained towards negative infinity
+        nf_ub    % unconstrained towards positive infinity
+        unconst  % unconstrained in both directions
         
-        fix_var = []   % fixed variables; lb==ub
-        lb_only = []   % only non-finite, non-fixed constraints on LB side
-        lb_ub   = []   % non-finite, non-fixed constraints on LB and UB side
-        ub_only = []   % only non-finite, non-fixed constraints on UB side
+        fix_var  % fixed variables; lb==ub
+        lb_only  % only non-finite, non-fixed constraints on LB side
+        lb_ub    % non-finite, non-fixed constraints on LB and UB side
+        ub_only  % only non-finite, non-fixed constraints on UB side
         
     end
     
@@ -91,7 +96,8 @@ classdef objFunction < handle
                 return; end
 
             % Parse the parameter/value pairs
-            assert(mod(nargin,2)==0, [...
+            assert(mod(nargin,2)==0,...
+                   [mfilename('class') ':pvpairs_expected'], [...
                    'Objective function object must be constructed via ',...
                    'parameter/value pairs.']);
 
@@ -105,43 +111,42 @@ classdef objFunction < handle
 
                 switch lower(parameter)
 
-                    % The objective function
+                    % The objective function(s)
                     case {'function' 'fcn' 'funfcn' 'objective_function',...
                           'cost_function' 'objective' 'cost'}
+                      
+                        if ~iscell(value)
+                            value = {value}; end
+                                              
+                        obj.funfcn = cellfun(@(x)verify_function_handle(x, 'objective function'),...
+                                             value,...
+                                             'UniformOutput', false);
+                                                        
+                    % Parameters
+                    case 'tolfun', obj.tolfun = verify_scalar(value, 'tolfun');
+                    case 'tolcon', obj.tolcon = verify_scalar(value, 'tolcon');
+                    case 'tolx'  , obj.tolx   = verify_scalar(value, 'tolx'  );
                         
-                        assert(isa(value, 'function_handle'),...
-                               [mfilename('class') ':objective_function_type_error'],...
-                               'Objective function must be given as a function handle.');
-                           
-                        obj.funfcn = value;
-                        
-                    case 'tolcon'
-                        % TODO: checks
-                        obj.tolCon = value;
 
                     % Inequality constraints
                     % (checks are done later)
-                    case 'a', obj.A = check_double_array(value, 'A');
-                    case 'b', obj.b = check_double_array(value, 'b');
+                    case 'a', obj.A = verify_matrix(value, 'A');
+                    case 'b', obj.b = verify_vector(value, 'b');
 
                     % Equality constraints
                     % (checks are done later)
-                    case {'aeq' 'a_eq' 'ae'}, obj.Aeq = check_double_array(value, 'A_eq');
-                    case {'beq' 'b_eq' 'be'}, obj.beq = check_double_array(value, 'b_eq');
+                    case {'aeq' 'a_eq' 'ae'}, obj.Aeq = verify_matrix(value, 'A_eq');
+                    case {'beq' 'b_eq' 'be'}, obj.beq = verify_vector(value, 'b_eq');
 
                     % Bound constraints
                     % (checks are done later)
-                    case {'lb' 'lower' 'lower_bound'}, obj.lb = check_double_array(value, 'lb');
-                    case {'ub' 'upper' 'upper_bound'}, obj.ub = check_double_array(value, 'ub');
+                    case {'lb' 'lower' 'lower_bound'}, obj.lb = verify_vector(value, 'lb');
+                    case {'ub' 'upper' 'upper_bound'}, obj.ub = verify_vector(value, 'ub');
                         
                     % Non-linear constraints
-                    case 'nonlcon'
-                        
-                        assert(isa(value, 'function_handle'),...
-                               [mfilename('class') ':constraint_function_type_error'],...
-                               'Non-linear constraint functions must be given as function handles.');
-
-                        obj.nonlcon{end+1} = value;
+                    case 'nonlcon'                        
+                        obj.nonlcon{end+1} = verify_function_handle(value,...
+                                                                    'Non-linear constraint function');
 
                     % Integer constraints
                     case 'intcon'
@@ -160,7 +165,6 @@ classdef objFunction < handle
                         
                         value = check_logical(value,...
                                               'constraints_in_objective_function');
-
                         obj.nonlinear_constraints_from_objective_function = value;
                         
                     % The objective function returns multiple arguments,
@@ -168,13 +172,8 @@ classdef objFunction < handle
                     % functions.
                     case {'number_of_objectives' 'objectives'}
                         
-                        assert(isnumeric(value) && isscalar(value) && ...
-                               isreal(value) && value > 0 && round(value)==value,...
-                               [mfilename('class') ':datatype_error'], [...
-                               'Argument "number_of_objectives" must be a real ',...
-                               'scalar integer.']);
-                        
-                        obj.number_of_objectives = value;                        
+                        obj.number_of_objectives = verify_scalar(value, ...
+                                                                 'number_of_objectives');                        
                         obj.defines_multiple_objectives = value > 1;                        
 
                     % Unsupported parameter
@@ -186,20 +185,199 @@ classdef objFunction < handle
 
             end
             
+            % Further checks and initializations
+            obj.postConstructionChecks();
             
+            
+            % Validators -------------------------------------------------------
+            
+            % Check that given parameter is an array of real and finite numbers
+            function M = check_double_array(M, parameter_name)
+                assert(isnumeric(M) && all(isfinite(M(:))) && all(isreal(M(:))),...
+                       [mfilename('class') ':datatype_error'], ...
+                       'Argument "%s" must be an array of real, finite values.',...
+                       parameter_name);                
+            end
+            
+            function M = verify_scalar(M, parameter_name)
+                check_double_array(M, parameter_name);
+                assert(isscalar(M),...
+                       [mfilename('class') ':datadims_error'],...
+                       'Argument "%s" must be a scalar.',...
+                       parameter_name);
+            end
+            
+            function M = verify_vector(M, parameter_name)
+                check_double_array(M, parameter_name);
+                assert(isvector(M),...
+                       [mfilename('class') ':datadims_error'],...
+                       'Argument "%s" must be a vector.',...
+                       parameter_name);
+            end
+            
+            function M = verify_matrix(M, parameter_name)
+                check_double_array(M, parameter_name);
+                assert(ismatrix(M),...% > R2010b
+                       [mfilename('class') ':datadims_error'],...
+                       'Argument "%s" must be a matrix.',...
+                       parameter_name);
+            end
+            
+            function F = verify_function_handle(F, parameter_name)
+                assert(isa(F, 'function_handle'),...
+                       [mfilename('class') ':datatype_error'],...
+                       'Argument "%s" must be specified with a function handle.',...
+                       parameter_name);
+            end
+            
+            % Check that given parameter is a boolean
+            function L = check_logical(L, parameter_name)
+                if ischar(L)
+                    switch lower(L)
+                        case {'no' 'off' 'none' 'nope' 'false' 'n'}
+                            L = false;
+                        case {'yes' 'yup' 'true'  'y'}
+                            L = true;
+                        otherwise
+                            error([mfilename('class') ':datatype_error'], [...
+                                  'When specifying argument "%s" via string, ',...
+                                  'that string must equal either "yes" or "no".'],...
+                                  parameter_name);
+                    end
+                else
+                    assert(islogical(L) && isscalar(value),...
+                          [mfilename('class') ':datatype_error'], ...
+                          'Argument "%s" must be a logical scalar.',...
+                          parameter_name);
+                end
+            end
+            
+        end
+        
+    end
+    
+    % Operator overloads
+    methods       
+        
+        % Overload subsref, not for indexing, but for evaluation
+        function varargout = subsref(obj, X)
+            if numel(X)==1 && strcmp(X.type, '()')
+                varargout{1} = obj.evaluate(X.subs{:});
+            else
+                try
+                    [varargout{1:nargout}] = builtin('subsref', obj, X);
+                catch ME
+                    throwAsCaller(ME);
+                end
+            end
+        end
+
+        % Overload feval, for old algorithms still using that
+        function varargout = feval(obj, X)
+            varargout{1} = obj.evaluate(X);
+        end
+        
+    end
+    
+    % Public functionality
+    methods
+        
+        % Public accessors; less technically names versions of the private
+        % functions below
+        function X = getRealX(obj, X_T)
+            X = obj.untransform_X(X_T);
+        end
+        
+        function X_T = getFakeX(obj, X)
+            X_T = obj.transform_X(X);
+        end
+        
+    end
+    
+    % Manual evaluation (for debugging purposes only, hence "hidden"
+    methods (Hidden)
+        
+        % Direct evaluation of function; for debugging purposes        
+        function Y = evaluateDirectly(obj, X)
+            
+            %assert() % numeric, etc. 
+            %assert() % A and X have size mismatch, etc.
+            
+            % Determine constraint violations
+            ineq = all(all( obj.A*X <= repmat(obj.b, 1, size(X,2)) ));
+            eqc  = all(all( abs(obj.Aeq*X - repmat(obj.beq, 1, size(X,2))) <= eps ));
+            ubnd = all(X <= obj.ub);
+            lbnd = all(X >= obj.lb);
+            intc = all( round(X(obj.intcon))==X(obj.intcon) );
+            
+            % Get the value of the objective function(s) and non-linear
+            % constraints
+            if obj.nonlinear_constraints_from_objective_function
+                [Y{1:obj.number_of_objectives}, nlc, nlceq] = obj.funfcn(X);
+            else
+                [nlc, nlceq] = cellfun(@(F)F(X), obj.nonlcon);
+                [Y{1:obj.number_of_objectives}] = obj.funfcn(X);
+            end
+            
+            obj.objfcn_evaluations = obj.objfcn_evaluations + 1;
+            obj.has_been_evaluated = true;
+            
+            nlc   = all(nlc <= 0);
+            nlceq = all(abs(nlceq) <= eps);
+            
+            % Display
+            cond = {'false', 'true'};
+            feas = {'infeasible', 'feasible'};
+            
+            fprintf(1, [...
+                    'Function value: %f\n\n',...
+                    'A·x <= b     : %s\n',...
+                    'Aeq·x == beq : %s\n',...
+                    'x <= UB      : %s\n',...
+                    'x >= LB      : %s\n',...
+                    'C(X) <= 0    : %s\n',...
+                    'Ceq(X) == 0  : %s\n',...
+                    'X(intcon) C Z: %s\n',...
+                    'Conclusion   : %s\n\n'],...
+                    Y{:},...
+                    cond{ineq+1},...
+                    cond{eqc+1},...
+                    cond{ubnd+1},...
+                    cond{lbnd+1},...
+                    cond{nlc+1},...
+                    cond{nlceq+1},...
+                    cond{intc+1},...
+                    feas{ (ineq && eqc && ubnd && lbnd && nlc && nlceq && intc) + 1});
+            
+        end
+               
+    end
+
+    
+    % Methods for internal use
+    methods (Access = private)
+        
+        % Validations 
+        % ======================================================================
+        
+        % Elaborate error trapping
+        function postConstructionChecks(obj)
+            
+            assert(~isempty(obj.funfcn),...
+                   [mfilename('class') ':function_not_defined'],...
+                   'GODLIKE requires at least one objective function.');
+               
+               
             % Check & adjust variables
             % ------------------------------------------------------------------
                         
             % Ensure tautologies
-            obj.is_constrained = ~isempty(obj.A)  || ~isempty(obj.Aeq) || ...
-                                 ~isempty(obj.lb) || ~isempty(obj.ub)  || ...
+            obj.is_constrained = ~isempty(obj.A)       || ~isempty(obj.Aeq) || ...
+                                 ~isempty(obj.lb)      || ~isempty(obj.ub)  || ...
                                  ~isempty(obj.nonlcon) || ~isempty(obj.intcon);
                              
             if obj.is_constrained
                 
-                if obj.nonlinear_constraints_from_objective_function
-                    obj.nonlcon = {}; end
-
                 % Checks
                 assert(~xor(isempty(obj.A),isempty(obj.b)), [...
                        [mfilename('class') ':inconsistent_inequality'],...
@@ -210,69 +388,24 @@ classdef objFunction < handle
                        'When specifying linear equalities, both Aeq and beq should be ',...
                        'non-empty.']);
 
-                % Deal with linear (in)equality constraints                                  
+                % Clean up the linear constraints                                  
                 [obj.A  , obj.b  ] = prepare_linear_constraints(obj.A  , obj.b  , 'inequality');
                 [obj.Aeq, obj.beq] = prepare_linear_constraints(obj.Aeq, obj.beq, 'equality'  );
                 
-                % Initialial size estimate comes from these
-                if ~isempty(obj.A)
-                    obj.original_X_size = [size(obj.A,2) 1]; end
-                if isempty(obj.original_X_size) && ~isempty(obj.Aeq)
-                    obj.original_X_size = [size(obj.Aeq,2) 1]; end                    
 
-                % Deal with bound constraints                
-                if isempty(obj.lb) && ~isempty(obj.ub)
-                    obj.lb = -inf(size(obj.ub)); end
-
-                if isempty(obj.ub) && ~isempty(obj.lb)
-                    obj.ub = +inf(size(obj.lb)); end
+                % Clean up the bound constraints                
+                [obj.lb, obj.ub] = prepare_bound_constraints(obj.lb, obj.ub);
                 
-                assert(numel(obj.lb) == numel(obj.ub),...
-                       [mfilename('class') ':bounds_dimension_mismatch'], ...
-                       'Upper and lower bounds differ in size.');
-                   
                 % Cross-check consistency between LB/UB and A/Aeq
                 [obj.A  , obj.b  ] = check_bound_vs_linear_constraints(obj.A  , obj.b  , 'inequality');
                 [obj.Aeq, obj.beq] = check_bound_vs_linear_constraints(obj.Aeq, obj.beq, 'equality'  );
+                                
+                % Check if sizes are all consistent acrcoss all constraints
+                check_constraint_dimensions(obj.lb, obj.A, obj.Aeq);
                         
                 % Prepare some handydandy indexing variables
                 if ~isempty(obj.lb) || ~isempty(obj.ub)
                     
-                    original_lb_size = size(obj.lb);   obj.lb = obj.lb(:);
-                    original_ub_size = size(obj.ub);   obj.ub = obj.ub(:);
-                    
-                    assert(~all(obj.ub==obj.lb),...
-                       [mfilename('class') ':bounds_are_equal'], ...
-                       'Upper and lower bounds are equal; nothing to do.');
-
-                    % LB/UB may be used to specify dimensions of the decision variable
-                    if ~isequal(original_lb_size, original_ub_size)
-                        warning([mfilename('class') ':lb_ub_dimension_mismatch'],...
-                                'Sizes of LB and UB arrays differ; using vector...');
-
-                        original_lb_size = size(obj.lb);
-                    end
-
-                    obj.original_X_size    = original_lb_size;                
-                    obj.transformed_X_size = size(obj.transform_X(obj.lb));
-
-                    % Check sizes
-                    if ~isempty(obj.A)
-                        assert(numel(obj.lb)==size(obj.A,2),...
-                               [mfilename('class') ':bound_constraint_dimension_mismatch'], [...
-                               'Number of elements in bound constraints LB/UB ',...
-                               'does not match the number of columns in the linear ',...
-                               'inequality constraint matrix A.']);
-                    end
-                    if ~isempty(obj.Aeq)
-                        assert(numel(obj.lb)==size(obj.Aeq,2),...
-                               [mfilename('class') ':bound_constraint_dimension_mismatch'], [...
-                               'Number of elements in bound constraints LB/UB ',...
-                               'does not match the number of columns in the linear ',...
-                               'equality constraint matrix A_eq.']);
-                    end
-
-                    % Set indices
                     obj.nf_lb   = ~isfinite(obj.lb);  
                     obj.nf_ub   = ~isfinite(obj.ub); 
 
@@ -291,37 +424,7 @@ classdef objFunction < handle
             % Small helper functions to make life easier
             % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
             
-            % Check that given parameter is a boolean
-            function L = check_logical(L, parameter_name)
-                if ischar(L)
-                    switch lower(L)
-                        case {'no' 'off' 'none' 'nope' 'false' 'n'}
-                            L = false;
-                        case {'yes' 'yup' 'true'  'y'}
-                            L = true;
-                        otherwise
-                            error([mfilename('class') ':datatype_error'], [...
-                                'When specifying argument "%s" via string, ',...
-                                'that string must equal either "yes" or "no".'],...
-                                parameter_name);
-                    end
-                else
-                    assert(islogical(L) && isscalar(value),...
-                        [mfilename('class') ':datatype_error'], ...
-                        'Argument "%s" must be a logical scalar.',...
-                        parameter_name);
-                end
-            end
-            
-            % Check that given parameter is an array of real and finite numbers
-            function M = check_double_array(M, parameter_name)
-                assert(isnumeric(M) && all(isfinite(M(:))) && all(isreal(M(:))),...
-                       [mfilename('class') ':datatype_error'], ...
-                       'Argument "%s" must be an array of real, finite values.',...
-                       parameter_name);                
-            end
-            
-            % Check & clean up linear (in)equatlity constraints
+            % Check & clean up linear constraints
             function [M,v] = prepare_linear_constraints(M,v,...
                                                         constraint_type)
                 
@@ -332,7 +435,7 @@ classdef objFunction < handle
                         case 'equality'  , M_str = 'Aeq'; v_str = 'beq'; 
                     end
                     
-                    % Bassic assertions
+                    % Basic assertions
                     assert(isvector(v) && size(M,1)==numel(v),...
                            [mfilename('class') ':invalid_linear_constraints'], [...
                            '%s constraints are implemented as %s·x < %s, where %s and %s ',...
@@ -388,6 +491,106 @@ classdef objFunction < handle
                 end
                 
             end            
+            
+            % Check & clean up bound constraints
+            function [lb,ub] = prepare_bound_constraints(lb,ub)
+                
+                % Empties
+                if isempty(lb) &&  isempty(ub), return; end                
+                if isempty(lb) && ~isempty(ub), lb = -inf(size(ub)); end
+                if isempty(ub) && ~isempty(lb), ub = +inf(size(lb)); end
+                
+                % One bound is scalar, the other is not: replicate
+                if isscalar(lb) && ~isscalar(ub)
+                    lb = lb*ones(size(ub)); end
+                
+                if isscalar(ub) && ~isscalar(lb)
+                    ub = ub*ones(size(lb)); end
+                
+                % Basic assertions
+                assert(numel(lb) == numel(ub),...
+                       [mfilename('class') ':bounds_dimension_mismatch'], ...
+                       'Upper and lower bounds differ in size.');
+                
+                assert(all(lb(:) <= ub(:)),...
+                       [mfilename('class') ':lb_exceeds_ub'], [...
+                       'All entries in [lb] must be smaller than the corresponding ',...
+                       'entries in [ub].']);
+                   
+                assert(~all(ub(:)==lb(:)),...
+                       [mfilename('class') ':bounds_are_equal'], ...
+                       'Upper and lower bounds are equal; nothing to do.');
+                   
+                % Save original size, but change the bound constraints into
+                % column vectors
+                original_lb_size = size(obj.lb);   obj.lb = obj.lb(:);
+                original_ub_size = size(obj.ub);   obj.ub = obj.ub(:);
+
+                % LB/UB may be used to specify dimensions of the decision variable
+                if ~isequal(original_lb_size, original_ub_size)
+                    warning([mfilename('class') ':lb_ub_dimension_mismatch'],...
+                            'Sizes of LB and UB arrays differ; using vector...');
+                    original_lb_size = size(obj.lb);
+                end
+                
+                % Set the X-sizes if they havent been specified via option 
+                if isempty(obj.original_X_size)
+                    obj.original_X_size    = original_lb_size;                
+                    obj.transformed_X_size = size(obj.transform_X(obj.lb));
+                else
+                    % TODO: (Rody Oldenhuis) check!
+                end
+                   
+            end
+            
+            % Check dimensions across all given constraints
+            function check_constraint_dimensions(lb, A, Aeq)
+                
+                have_bounds       = ~isempty(lb);
+                have_inequalities = ~isempty(A);
+                have_equalities   = ~isempty(Aeq);
+                
+                % Quick exit
+                if sum([have_bounds have_inequalities have_equalities])==1
+                    return; end
+                
+                % Check whether all dimensions of all constraints agree
+                if have_bounds 
+                    
+                    if have_inequalities
+                        assert(numel(lb)==size(A,2),...
+                               [mfilename('class') ':dimension_mismatch'], [...
+                               'Number of elements in bound constraints LB/UB ',...
+                               'does not match the number of columns in the linear ',...
+                               'inequality constraint matrix A.']);
+                    end
+                    if have_equalities
+                        assert(numel(lb)==size(Aeq,2),...
+                               [mfilename('class') ':dimension_mismatch'], [...
+                               'Number of elements in bound constraints LB/UB ',...
+                               'does not match the number of columns in the linear ',...
+                               'equality constraint matrix A_eq.']);
+                    end
+                
+                else % means: we have lb=[], A=nonempty, Aeq=nonempty
+                    
+                    assert(numel(obj.lb)==size(obj.Aeq,2),...
+                           [mfilename('class') ':dimension_mismatch'], [...
+                           'Dimension mismatch between linear equality constraint ',...
+                           'matrix A_eq and linear inequality constraint matrix ',...
+                           'A.']);
+                       
+                    % Set the X-sizes if they havent been specified yet
+                    if isempty(obj.original_X_size)
+                        obj.original_X_size = [size(obj.A,2) 1];
+                        obj.transformed_X_size = size(obj.transform_X(obj.lb));
+                    else
+                        % TODO: (Rody Oldenhuis) check!
+                    end
+                    
+                end
+                
+            end
             
             % Check LB/UB and A/Aeq consistency
             function [M,v] = check_bound_vs_linear_constraints(M,v,...
@@ -464,112 +667,14 @@ classdef objFunction < handle
                     end
                     
                 end
-            end
+            end   
             
-        end
+        end 
         
-    end
-    
-    % Operator overloads
-    methods       
         
-        % Overload subsref, not for indexing, but for evaluation
-        function varargout = subsref(obj, X)
-            if numel(X)==1 && strcmp(X.type, '()')
-                varargout{1} = obj.evaluate(X.subs{:});
-            else
-                try
-                    [varargout{1:nargout}] = builtin('subsref', obj, X);
-                catch ME
-                    throwAsCaller(ME);
-                end
-            end
-        end
-
-        % Overload feval, for old algorithms still using that
-        function varargout = feval(obj, X)
-            varargout{1} = obj.evaluate(X);
-        end
         
-    end
-    
-    % Public functionality
-    methods
-        
-        % Public accessors; less technically names versions of the private
-        % functions below
-        function X = getRealX(obj, X_T)
-            X = obj.untransform_X(X_T);
-        end
-        
-        function X_T = getFakeX(obj, X)
-            X_T = obj.transform_X(X);
-        end
-        
-    end
-    
-    % Manual evaluation (for debugging purposes only, hence "hidden"
-    methods(Hidden)
-        
-        % Direct evaluation of function; for debugging purposes        
-        function Y = evaluateDirectly(obj, X)
-            
-            %assert() % numeric, etc. 
-            %assert() % A and X have size mismatch, etc.
-            
-            % Determine constraint violations
-            ineq = all(all( obj.A*X <= repmat(obj.b, 1, size(X,2)) ));
-            eqc  = all(all( abs(obj.Aeq*X - repmat(obj.beq, 1, size(X,2))) <= eps ));
-            ubnd = all(X <= obj.ub);
-            lbnd = all(X >= obj.lb);
-            intc = all( round(X(obj.intcon))==X(obj.intcon) );
-            
-            % Get the value of the objective function(s) and non-linear
-            % constraints
-            if obj.nonlinear_constraints_from_objective_function
-                [Y{1:obj.number_of_objectives}, nlc, nlceq] = obj.funfcn(X);
-            else
-                [nlc, nlceq] = cellfun(@(F)F(X), obj.nonlcon);
-                [Y{1:obj.number_of_objectives}] = obj.funfcn(X);
-            end
-            
-            obj.objfcn_evaluations = obj.objfcn_evaluations + 1;
-            obj.has_been_evaluated = true;
-            
-            nlc   = all(nlc <= 0);
-            nlceq = all(abs(nlceq) <= eps);
-            
-            % Display
-            cond = {'false', 'true'};
-            feas = {'infeasible', 'feasible'};
-            
-            fprintf(1, [...
-                    'Function value: %f\n\n',...
-                    'A·x <= b     : %s\n',...
-                    'Aeq·x == beq : %s\n',...
-                    'x <= UB      : %s\n',...
-                    'x >= LB      : %s\n',...
-                    'C(X) <= 0    : %s\n',...
-                    'Ceq(X) == 0  : %s\n',...
-                    'X(intcon) C Z: %s\n',...
-                    'Conclusion   : %s\n\n'],...
-                    Y{:},...
-                    cond{ineq+1},...
-                    cond{eqc+1},...
-                    cond{ubnd+1},...
-                    cond{lbnd+1},...
-                    cond{nlc+1},...
-                    cond{nlceq+1},...
-                    cond{intc+1},...
-                    feas{ (ineq && eqc && ubnd && lbnd && nlc && nlceq && intc) + 1});
-            
-        end
-               
-    end
-
-    
-    % Methods for internal use
-    methods (Access = private)
+        % Transformations 
+        % ======================================================================
         
         % Evaluate transformed function & apply penalties
         function Y = evaluate(obj, X_T)
@@ -694,7 +799,7 @@ classdef objFunction < handle
             % required: Aeq*x = beq   
             if ~isempty(obj.Aeq)
                 lin_eq    = abs( obj.Aeq*x - obj.beq );                
-                sumlin_eq = sum(lin_eq( lin_eq > obj.tolCon ));
+                sumlin_eq = sum(lin_eq( lin_eq > obj.tolcon ));
                 linear_eq_Penalty = penalize_value(sumlin_eq);
             end
 
@@ -702,7 +807,7 @@ classdef objFunction < handle
             % required: A*x <= b
             if ~isempty(obj.A)
                 lin_ineq = obj.A*x - obj.b;                     
-                lin_ineq(lin_ineq <= obj.tolCon) = 0;
+                lin_ineq(lin_ineq <= obj.tolcon) = 0;
                 linear_ineq_Penalty = penalize_value(sum(lin_ineq(:)));
             end
 
@@ -724,14 +829,14 @@ classdef objFunction < handle
 
             % Process non-linear inequality constraints
             if ~isempty(c)
-                violated_c = c > obj.tolCon;                
+                violated_c = c > obj.tolcon;                
                 nonlin_ineq_Penalty = penalize_value( sum(c(violated_c)) );
             end
 
             % Process non-linear equality constraints
             if ~isempty(ceq)
                 ceq = abs(ceq);
-                violated_ceq = (ceq >= obj.tolCon);                 
+                violated_ceq = (ceq >= obj.tolcon);                 
                 nonlin_eq_Penalty = penalize_value( sum(ceq(violated_ceq)) );
             end
 
@@ -751,13 +856,13 @@ classdef objFunction < handle
                     exp50 = exp(50); end
 
                 % Safety condition
-                if violation <= obj.tolCon
+                if violation <= obj.tolcon
                     fP = 0; 
                     return; 
                 end
 
                 % Scaling parameter    
-                scale = min(1e60, violation/obj.tolCon);          
+                scale = min(1e60, violation/obj.tolcon);          
                 
                 % Linear penalty to avoid overflow
                 if scale*violation > 50
@@ -776,3 +881,7 @@ classdef objFunction < handle
     end
 
 end
+
+
+
+

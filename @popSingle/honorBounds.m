@@ -1,3 +1,6 @@
+% FIXME: (Rody Oldenhuis) once we've switched to using objectiveFunctions(), we 
+% can simply remove this whole method
+
 function [newpop, newfit] = honorBounds(pop, newpop, newfit)
 
     % find violation sites

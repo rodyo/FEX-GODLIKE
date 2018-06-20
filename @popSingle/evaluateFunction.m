@@ -14,11 +14,7 @@ function evaluateFunction(pop)
     end
 
     pop_inputs = pop.pop_data.offspring_population(sites, :);
-
-    %{
-    THIS:
-    %}
-    num_pop = nnz(sites);
+    num_pop    = nnz(sites);
 
     % Evaluate all functions for each population member in
     % parallel or in serial
@@ -32,13 +28,12 @@ function evaluateFunction(pop)
         end
     end
     pop.pop_data.function_values_offspring(sites, :) = fvs;
-
-    % Update number of function evaluations
+    
     % NOTE: count each function call as one, even though it may return
     % multiple objectives.
     pop.funevals = pop.funevals + num_pop*numel(pop.funfcn);
 
-end % method
+end
 
 function pop_output = evaluate_single_function(pop, pop_input)
 
@@ -57,4 +52,4 @@ function pop_output = evaluate_single_function(pop, pop_input)
         end
     end
 
-end % subfunction
+end
