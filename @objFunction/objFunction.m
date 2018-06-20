@@ -8,7 +8,7 @@ classdef objFunction < handle
     
     %% Properties
             
-    properties (SetAccess = immutable)
+    properties (SetAccess = private)
         
         % NOTE: (Rody Oldenhuis) property validation functions can't be defined
         % on immutable properties in versions older than R2017b.
@@ -144,9 +144,11 @@ classdef objFunction < handle
                     case {'ub' 'upper' 'upper_bound'}, obj.ub = verify_vector(value, 'ub');
                         
                     % Non-linear constraints
-                    case 'nonlcon'                        
-                        obj.nonlcon{end+1} = verify_function_handle(value,...
-                                                                    'Non-linear constraint function');
+                    case 'nonlcon'   
+                        if ~isempty(value)
+                            obj.nonlcon{end+1} = verify_function_handle(value,...
+                                                                        'Non-linear constraint function');
+                        end
 
                     % Integer constraints
                     case 'intcon'
@@ -192,24 +194,24 @@ classdef objFunction < handle
             % Validators -------------------------------------------------------
             
             % Check that given parameter is an array of real and finite numbers
-            function M = check_double_array(M, parameter_name)
-                assert(isnumeric(M) && all(isfinite(M(:))) && all(isreal(M(:))),...
+            function a = check_double_array(a, parameter_name)
+                assert(isnumeric(a) && all(isfinite(a(:))) && all(isreal(a(:))),...
                        [mfilename('class') ':datatype_error'], ...
                        'Argument "%s" must be an array of real, finite values.',...
                        parameter_name);                
             end
             
-            function M = verify_scalar(M, parameter_name)
-                check_double_array(M, parameter_name);
-                assert(isscalar(M),...
+            function s = verify_scalar(s, parameter_name)
+                check_double_array(s, parameter_name);
+                assert(isempty(s) || isscalar(s),...
                        [mfilename('class') ':datadims_error'],...
                        'Argument "%s" must be a scalar.',...
                        parameter_name);
             end
             
-            function M = verify_vector(M, parameter_name)
-                check_double_array(M, parameter_name);
-                assert(isvector(M),...
+            function v = verify_vector(v, parameter_name)
+                check_double_array(v, parameter_name);
+                assert(isempty(v) || isvector(v),...
                        [mfilename('class') ':datadims_error'],...
                        'Argument "%s" must be a vector.',...
                        parameter_name);
@@ -217,7 +219,7 @@ classdef objFunction < handle
             
             function M = verify_matrix(M, parameter_name)
                 check_double_array(M, parameter_name);
-                assert(ismatrix(M),...% > R2010b
+                assert(isempty(M) || ismatrix(M),...% > R2010b
                        [mfilename('class') ':datadims_error'],...
                        'Argument "%s" must be a matrix.',...
                        parameter_name);
@@ -282,14 +284,14 @@ classdef objFunction < handle
     % Public functionality
     methods
         
-        % Public accessors; less technically names versions of the private
+        % Public accessors; less technical names versions of the private
         % functions below
         function X = getRealX(obj, X_T)
-            X = obj.untransform_X(X_T);
+            X = obj.untransformX(X_T);
         end
         
         function X_T = getFakeX(obj, X)
-            X_T = obj.transform_X(X);
+            X_T = obj.transformX(X);
         end
         
     end
@@ -536,7 +538,7 @@ classdef objFunction < handle
                 % Set the X-sizes if they havent been specified via option 
                 if isempty(obj.original_X_size)
                     obj.original_X_size    = original_lb_size;                
-                    obj.transformed_X_size = size(obj.transform_X(obj.lb));
+                    obj.transformed_X_size = size(obj.transformX(obj.lb));
                 else
                     % TODO: (Rody Oldenhuis) check!
                 end
@@ -583,7 +585,7 @@ classdef objFunction < handle
                     % Set the X-sizes if they havent been specified yet
                     if isempty(obj.original_X_size)
                         obj.original_X_size = [size(obj.A,2) 1];
-                        obj.transformed_X_size = size(obj.transform_X(obj.lb));
+                        obj.transformed_X_size = size(obj.transformX(obj.lb));
                     else
                         % TODO: (Rody Oldenhuis) check!
                     end
@@ -670,7 +672,6 @@ classdef objFunction < handle
             end   
             
         end 
-        
         
         
         % Transformations 

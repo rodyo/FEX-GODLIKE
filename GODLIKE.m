@@ -136,18 +136,22 @@ function varargout = GODLIKE(funfcn, ...
     % The following trainwreck is the only way to maintain this basic
     % functionality, while addressing ALL related warnings in ALL versions
     % of MATLAB.
+    argc = nargin;
+    argo = nargout;
     if verLessThan('MATLAB', '7.13')
-        error(   nargchk(3,inf,nargin ,'struct')); %#ok<*NCHKN>
-        error(nargoutchk(0,6,nargout,'struct'));   %#ok<*NCHKE>
+        error(   nargchk(3,inf,argc,'struct')); %#ok<*NCHKN>
+        error(nargoutchk(0,  6,argo,'struct'));   %#ok<*NCHKE>
     else
         narginchk(3,inf);
         nargoutchk(0,6);
     end
 
     
+    
+    %{
     % Get options structure
-    if (nargin >= 10) 
-        if nargin == 10 
+    if (argc >= 10) 
+        if argc == 10 
             assert(isstruct(varargin{end}),...
                    [mfilename ':datatype_error'],...
                    'Argument [options] must be a structure.');
@@ -157,7 +161,25 @@ function varargout = GODLIKE(funfcn, ...
         options = set_options();
     end
     
-    %
+    % OK, time to create a devel branch. Committing this as a means to stash...
+    
+    unconstrained_objective = objFunction('objective_function', funfcn,...
+                                          'lb'     , get_arg(1),...
+                                          'ub'     , get_arg(2),...
+                                          'A'      , get_arg(3),...
+                                          'b'      , get_arg(4),...
+                                          'Aeq'    , get_arg(5),...
+                                          'beq'    , get_arg(6),...
+                                          'nonlcon', get_arg(7),...
+                                          'intcon' , get_arg(8));
+    function arg = get_arg(n)
+        arg = []; if argc-1>=n, arg = varargin{n}; end, end
+    %}
+    % {
+    lb = varargin{1};
+    ub = varargin{2};
+    varargin(1:2) = [];
+    %}
     
 
     % resize and reshape boundaries and dimensions
@@ -191,8 +213,9 @@ function varargout = GODLIKE(funfcn, ...
     % subfunctions. Later, it is turned into the output argument [output] by removing some
     % obsolete entries from the structure.
 
-    % if an output function's been given, evaluate them
-    state = 'init'; % initialization state
+    % if an output function's been given, evaluate them to allow them to do 
+    % any initialization they need
+    state = 'init'; 
     if ~isempty(options.OutputFcn)
         cellfun(@(x) x([],[],state),...
                 options.OutputFcn,...
@@ -215,9 +238,7 @@ function varargout = GODLIKE(funfcn, ...
     % GODLIKE loop
     while ~converged
 
-        % randomize population sizes (minimum is 5 individuals)
-        %frac_popsize = break_value(popsize, 5, number_of_algorithms);
-        % popsize may already give us the divisions into algorithms
+        % randomize population sizes (minimum is 5 individuals)        
         if length(popsize) == number_of_algorithms
             frac_popsize  = popsize;
             total_popsize = sum(popsize);
@@ -242,8 +263,8 @@ function varargout = GODLIKE(funfcn, ...
 
             % perform algorithm iterations
             if strcmpi(pop{algo}.algorithm, 'MS')
-            % Multi-start behaves differently; its needs to
-            % execute its iterations inside popSingle.
+                % Multi-start behaves differently; it needs to
+                % execute its iterations inside popSingle.
 
                 % save previous value of number of function evaluations
                 prev_FE = pop{algo}.funevals;
@@ -254,7 +275,7 @@ function varargout = GODLIKE(funfcn, ...
                 % adjust number of function evaluations made
                 num_funevaluations = num_funevaluations + pop{algo}.funevals - prev_FE;
 
-            else % Perform single iterations for all other algorithms
+            else
                 counter = 0; % used for single-objective optimization
                 for jj = 1:frac_iterations(algo)
 
@@ -325,15 +346,15 @@ function varargout = GODLIKE(funfcn, ...
 
         end % main loop
 
-        % if one of the output functions returned a stop request, break
+        % Break if: 
+        % - one of the output functions returned a stop request
         if outputFcnbreak, converged = true; end
-        % check maximum iterations
+        % - maximum number of generation have been exceeded
         if (generation >= options.MaxIters), converged = true; end
-
 
         generation = generation + 1;
 
-        % check for GODLIKE convergence (and update output structure)
+        % check for GODLIKE convergence and update output structure
         [converged, output] = check_convergence(converged, output);
 
         % evaluate the output functions
