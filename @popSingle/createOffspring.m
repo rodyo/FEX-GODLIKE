@@ -11,11 +11,9 @@ function createOffspring(pop, pool, times, FE)
     newpop = zeros(pop.size, pop.dimensions);           % empty new population
     newfit = NaN(pop.size, pop.options.num_objectives); % placeholder for the sites to
                                                         % evaluate the function
-    % determine which algorithm to use
-    type = upper(pop.algorithm);
-
-    % generate offspring with selected algorithm
-    switch type
+    
+    % Generate offspring with selected algorithm
+    switch upper(pop.algorithm)
 
         % Multistart
         case 'MS'  % Multistart

@@ -214,7 +214,6 @@ function varargout = GODLIKE(funfcn, ...
     
     % FIXME: (Rody Oldenhuis) move this to objFunction()
     % {
-
     % test input objective function(s) to determine the problem's dimensions,
     % number of objectives and proper input format
     [options,...
@@ -231,7 +230,7 @@ function varargout = GODLIKE(funfcn, ...
                      pop = cell(number_of_algorithms,1); % cell array of [population] objects
      num_funevaluations  = 0;                            % number of function evaluations
      [converged, output] = check_convergence();          % initial output structure
-          outputFcnbreak = false;                        % exit condition for output functions
+         outputfcn_break = false;                        % exit condition for output functions
 
     % Initially, [output] is a large structure used to move data to and from all the
     % subfunctions. Later, it is turned into the output argument [output] by removing some
@@ -239,14 +238,8 @@ function varargout = GODLIKE(funfcn, ...
 
     % if an output function's been given, evaluate them to allow them to do 
     % any initialization they need
-    % TODO: (Rody Oldenhuis) MOVE TO (NESTED?) FUNCTION 
-    state = 'init'; 
-    if ~isempty(options.OutputFcn)
-        cellfun(@(x) x([],[],state),...
-                options.OutputFcn,...
-                'UniformOutput', false);
-    end
-
+    evaluate_output_functions('init');    
+    
     % do an even more elaborate check
     options = check_parsed_input(nargout, ...
                                  single,...
@@ -303,37 +296,24 @@ function varargout = GODLIKE(funfcn, ...
             else
                 counter = 0; % used for single-objective optimization
                 for jj = 1:frac_iterations(algo)
-
-                    % do single iteration on this population
+                    
                     pop{algo}.iterate;
 
-                    % evaluate the output functions
-                    % TODO: (Rody Oldenhuis) MOVE TO (NESTED?) FUNCTION 
-                    if ~isempty(options.OutputFcn)
-                        % most intensive part, here in the inner loop
-                        state = 'interrupt';
-                        % collect information
-                        [x, optimValues] = get_outputFcn_values(algo);
-                        % evaluate the output functions
-                        stop = cellfun(@(y)y(x, optimValues, state), ...
-                                       options.OutputFcn,...
-                                       'UniformOutput', false);
-                        stop = any([stop{:}]);
-                        % GODLIKE might need to stop here
-                        if stop
-                            outputFcnbreak = true;
-                            break;
-                        end
+                    % Evaluate the output functions. interrupt == most intensive 
+                    % part; GODLIKE might need to stop here if any of the output 
+                    % functions request it
+                    if evaluate_output_function('interrupt', algo)
+                        outputfcn_break = true;
+                        break;
                     end
 
-                    % calculate total number of function evaluations
-                    % Appareantly, pop{:}.funevals doesn't work. So
+                    % Apparently, pop{:}.funevals doesn't work. So
                     % we have to do a loop through all of them.
                     funevaluations = 0;
                     for k = 1:number_of_algorithms
                         if ~isempty(pop{k})
                             funevaluations = funevaluations + pop{k}.funevals; end
-                    end % for
+                    end 
                     num_funevaluations = test_evaluations + funevaluations;
 
                     % check for convergence of this iteration
@@ -346,24 +326,21 @@ function varargout = GODLIKE(funfcn, ...
                         display_progress();
                         break;
                     end
-
-                    % check function evaluations, and exit if it
-                    % surpasses the preset maximum
+                    
                     if (num_funevaluations >= options.MaxFunEvals)
-                        % also display last iteration
                         display_progress();
-                        converged = true;
+                        converged = true; % TODO: (Rody Oldenhuis) ...? this is not really "convergence", is it...
                         break;
                     end
 
-                    % display progress at every iteration
+                    % Display stats for this iteration
                     display_progress();
 
                 end % algorithm loop
             end
-
-            % if one of the output functions returned a stop request, break
-            if outputFcnbreak, break, end
+            
+            if outputfcn_break
+                break, end
 
             % if we have convergence inside the algorithm
             % loop, break the main loop
@@ -374,32 +351,23 @@ function varargout = GODLIKE(funfcn, ...
 
         % Break if: 
         % - one of the output functions returned a stop request
-        if outputFcnbreak, converged = true; end
         % - maximum number of generation have been exceeded
-        if (generation >= options.MaxIters), converged = true; end
+        if outputfcn_break || generation >= options.MaxIters
+            converged = true; end
 
         generation = generation + 1;
 
         % check for GODLIKE convergence and update output structure
         [converged, output] = check_convergence(converged, output);
 
-        % evaluate the output functions
-        if ~outputFcnbreak && ~isempty(options.OutputFcn)
-            % end of a GODLIKE iteration
-            state = 'iter';
-            % collect the information
-            [x, optimValues] = get_outputFcn_values([]);
-            % call the output functions
-            cellfun(@(y)y(x, optimValues, state),...
-                    options.OutputFcn,...
-                    'UniformOutput', false);
-        end
+        % Evaluate the output functions ('iter' == end of a GODLIKE loop; 
+        % non-terminal if stop condition encountered)
+        evaluate_output_functions('iter');        
 
-    end % GODLIKE loop
+    end % main loop
 
-    % display final results
-    % (*NOT* if the output function requested to stop)
-    if ~outputFcnbreak
+    % display final results, EXCEPT if the output function requested to stop
+    if ~outputfcn_break
         display_progress(); end
 
 
@@ -426,7 +394,7 @@ function varargout = GODLIKE(funfcn, ...
         varargout{6} = output;
 
         % in case the output function requested to stop
-        if outputFcnbreak
+        if outputfcn_break
             output.exitflag = 2;
             output.message  = 'GODLIKE was terminated by one of the output functions.';
             varargout{5} = output.exitflag ;
@@ -451,7 +419,7 @@ function varargout = GODLIKE(funfcn, ...
             varargout{4} = outpt;
 
             % in case the output function requested to stop
-            if outputFcnbreak
+            if outputfcn_break
                 outpt.exitflag = 2;
                 outpt.message  = 'GODLIKE was terminated by one of the output functions.';
                 varargout{3} = outpt.exitflag;
@@ -480,7 +448,7 @@ function varargout = GODLIKE(funfcn, ...
             varargout{4} = output;
 
             % in case the output function requested to stop
-            if outputFcnbreak
+            if outputfcn_break
                 output.message  = 'GODLIKE was terminated by one of the output functions.';
                 output.exitflag = 2;
                 varargout{3} = output.exitflag;
@@ -489,13 +457,11 @@ function varargout = GODLIKE(funfcn, ...
         end
     end
 
-     % Last call to output function
-     % TODO: (Rody Oldenhuis) MOVE TO (NESTED?) FUNCTION 
-    if ~isempty(options.OutputFcn)
-        cellfun(@(y)y([],[], 'done'),...
-                options.OutputFcn,...
-                'UniformOutput', false);
-    end
+     % Last call to output function    
+    evaluate_output_functions('done');
+    
+    
+    
 
 
     %% Nested functions
@@ -506,143 +472,38 @@ function varargout = GODLIKE(funfcn, ...
 
 
 
-    % test the function, and determine the amount of objectives. Here
-    % it is decided whether the optimization is single-objective or
-    % multi-objective.
-    function [options,...
-              single,...
-              multi,...
-              fevals] = test_funfcn(lb, options)
-
-        % initialize
-        fevals = 0;
-        options.num_objectives = 1;
-
-        % split multi/single objective
-        if iscell(funfcn) && (numel(funfcn) > 1)
-            % no. of objectives is simply the amount of provided objective functions
-            options.num_objectives = numel(funfcn);
-            % single is definitely false
-            single = false;
-        elseif iscell(funfcn) && (numel(funfcn) == 1)
-            % single it true but might still change to false
-            single = true;
-            % also convert function to function_handle in this case
-            funfcn = funfcn{1};
-        else
-            % cast fun to cell
-            funfcn = {funfcn};
-            % single is true but might still change to false
-            single = true;
-        end
-
-        % Try to evaluate the objective and constraint functions, with the
-        % original [lb]. If any evaluation fails, throw an error
-        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-        % reshape to original size
-        lb_original = reshape(lb, sze);
-
-        % loop through all objective functions
-        % (also works for single function)
-        for ii = 1:numel(funfcn)
-
-            % try to evaluate the function
-            try
-                % simply evaluate the function with the lower bound
-                if options.ConstraintsInObjectiveFunction == 0
-                    % no constraints
-                    sol = feval(funfcn{ii}, (lb_original));
-                % constraints might be given in the objective functions
-                else
-                    arg_out = cell(1, options.ConstraintsInObjectiveFunction);
-                    [arg_out{:}] = feval(funfcn{ii}, lb_original);
-                    sol = arg_out{1};
-                    con = arg_out{options.ConstraintsInObjectiveFunction};
-                    % con MUST be a vector
-                    if ~isvector(con)
-                        error([mfilename ':confun_must_return_vector'], [...
-                             'All constraint functions must return a [Nx1] or [1xN] vector ',...
-                             'of constraint violations.\nSee the documentation for more details.']);
-                    end
-                end
-                % keep track of the number of function evaluations
-                fevals = fevals + 1;
-
-                % see whether single must be changed to multi
-                if single && (numel(sol) > 1)
-                    single = false;
-                    options.num_objectives = numel(sol);
-                    options.obj_columns    = true;
-                end
-
-                % it might happen that more than one function is provided,
-                % but that one of the functions returns more than one function
-                % value. GODLIKE does not handle that case
-                if (numel(sol) > 1) && (ii > 1)
-                    error([mfilename ':multimulti_not_allowed'], [...
-                          'GODLIKE cannot optimize multiple multi-objective problems ',...
-                          'simultaneously. Use GODLIKE multiple times on each of your objective ',...
-                          'functions separately.\n\nThis error is generated because the first of ',...
-                          'your objective functions returned multiple values, while ',...
-                          'you provided multiple objective functions. Only one of these formats ',...
-                          'can be used for multi-objective optimization, not both.'])
-                end
-
-            % if evaluating the function fails, throw error
-            catch userFcn_ME
-                pop_ME = MException([mfilename ':function_doesnt_evaluate'], ...
-                                    'GODLIKE cannot continue: failure during function evaluation.');
-                userFcn_ME = addCause(userFcn_ME, pop_ME);
-                rethrow(userFcn_ME);
-            end % try/catch
-
-        end % for
-
-        % see if the optimization is multi-objective
-        multi = ~single;
-
-        % loop through (all) constraint function(s)
-        if constrained && ...
-                (options.ConstraintsInObjectiveFunction == 0)
-
-            for ii = 1:numel(confcn)
-                % some might be empty
-                if isempty(confcn{ii})
-                    continue, end
-
-                % try to evaluate the function
-                try
-                    % simply evaluate the function with the lower bound
-                    con = feval(confcn{ii}, lb_original);
-                    % keep track of the number of function evaluations
-                    fevals = fevals + 1;
-                    % con MUST be a vector
-                    if ~isvector(con)
-                        error([mfilename ':confun_must_return_vector'], [...
-                              'All constraint functions must return a [Nx1] or [1xN] vector ',...
-                              'of constraint violations.\nSee the documentation for more details.']);
-                    end
-
-                % if evaluating the function fails, throw error
-                catch userFcn_ME
-                    pop_ME = MException([mfilename ':constraint_function_doesnt_evaluate'], [...
-                                        'GODLIKE cannot continue: failure during evaluation of ',...
-                                        'one of the constraint functions.']);
-                    userFcn_ME = addCause(userFcn_ME, pop_ME);
-                    rethrow(userFcn_ME);
-                end 
-
-            end 
-
-        end 
-
-    end 
+    
 
     
-    % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
-    % functions used in the main loop
-    % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
+    % Evaluate the output functions 
+    function stop = evaluate_output_functions(state, algo)
+        
+        stop = false;
+        
+        if ~isempty(options.OutputFcn)
+            switch state                
+                
+                case 'interrupt'                    
+                    [x, optimValues] = get_outputFcn_values(algo);                    
+                    stop = cellfun(@(y)y(x, optimValues, 'interrupt'), ...
+                                   options.OutputFcn,...
+                                   'UniformOutput', false);
+                    stop = any([stop{:}]);
+                    
+                case 'iter'
+                    [x, optimValues] = get_outputFcn_values([]);                    
+                    cellfun(@(y)y(x, optimValues, state),...
+                            options.OutputFcn,...
+                            'UniformOutput', false);                    
+                    
+                case {'init' 'done'}                
+                    cellfun(@(y)y([],[], state),...
+                            options.OutputFcn,...
+                            'UniformOutput', false);
+            end        
+        end  
+        
+    end
 
     % shuffle and (re)initialize the population objects
     function pop = interchange_populations(pop)

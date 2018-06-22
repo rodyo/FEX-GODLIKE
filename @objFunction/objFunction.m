@@ -301,15 +301,12 @@ classdef objFunction < handle
                    [mfilename('class') ':function_not_defined'],...
                    'GODLIKE requires at least one objective function.');
                
-               
-            % Check & adjust variables
-            % ------------------------------------------------------------------
-                        
             % Ensure tautologies
             obj.is_constrained = ~isempty(obj.A)       || ~isempty(obj.Aeq) || ...
                                  ~isempty(obj.lb)      || ~isempty(obj.ub)  || ...
                                  ~isempty(obj.nonlcon) || ~isempty(obj.intcon);
                              
+            % Initializations specific to constrained problems
             if obj.is_constrained
                 
                 % Checks
@@ -354,6 +351,12 @@ classdef objFunction < handle
                 end
 
             end
+            
+            % Check whether objective and non-linear constraint functions can be
+            % evaluated without error. This also provides a mechanism to
+            % verify/check the problems dimensions and single/multi-objectivism.
+            test_funfcn();
+            
             
             % Small helper functions to make life easier
             % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -602,6 +605,153 @@ classdef objFunction < handle
                     
                 end
             end   
+            
+            
+            
+            
+            
+            % Test the function, and determine/verify the number of objectives, and 
+            % verify/decide whether the optimization is single or multi-objective.
+            function [options,...
+                      single,...
+                      multi,...
+                      fevals] = test_funfcn(lb, options)
+
+                % initialize
+                fevals = 0;
+                options.num_objectives = 1;
+
+                % split multi/single objective
+                if iscell(funfcn) && (numel(funfcn) > 1)
+                    % no. of objectives is simply the amount of provided objective functions
+                    options.num_objectives = numel(funfcn);
+                    % single is definitely false
+                    single = false;
+                elseif iscell(funfcn) && (numel(funfcn) == 1)
+                    % single it true but might still change to false
+                    single = true;
+                    % also convert function to function_handle in this case
+                    funfcn = funfcn{1};
+                else
+                    % cast fun to cell
+                    funfcn = {funfcn};
+                    % single is true but might still change to false
+                    single = true;
+                end
+
+                % Try to evaluate the objective and constraint functions, with the
+                % original [lb]. If any evaluation fails, throw an error
+                % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+                % reshape to original size
+                lb_original = reshape(lb, sze);
+
+                % loop through all objective functions
+                % (also works for single function)
+                for ii = 1:numel(funfcn)
+
+                    % try to evaluate the function
+                    try
+                        % simply evaluate the function with the lower bound
+                        if options.ConstraintsInObjectiveFunction == 0
+                            % no constraints
+                            sol = feval(funfcn{ii}, (lb_original));
+                        % constraints might be given in the objective functions
+                        else
+                            arg_out = cell(1, options.ConstraintsInObjectiveFunction);
+                            [arg_out{:}] = feval(funfcn{ii}, lb_original);
+                            sol = arg_out{1};
+                            con = arg_out{options.ConstraintsInObjectiveFunction};
+                            % con MUST be a vector
+                            if ~isvector(con)
+                                error([mfilename ':confun_must_return_vector'], [...
+                                     'All constraint functions must return a [Nx1] or [1xN] vector ',...
+                                     'of constraint violations.\nSee the documentation for more details.']);
+                            end
+                        end
+                        % keep track of the number of function evaluations
+                        fevals = fevals + 1;
+
+                        % see whether single must be changed to multi
+                        if single && (numel(sol) > 1)
+                            single = false;
+                            options.num_objectives = numel(sol);
+                            options.obj_columns    = true;
+                        end
+
+                        % it might happen that more than one function is provided,
+                        % but that one of the functions returns more than one function
+                        % value. GODLIKE does not handle that case
+                        if (numel(sol) > 1) && (ii > 1)
+                            error([mfilename ':multimulti_not_allowed'], [...
+                                  'GODLIKE cannot optimize multiple multi-objective problems ',...
+                                  'simultaneously. Use GODLIKE multiple times on each of your objective ',...
+                                  'functions separately.\n\nThis error is generated because the first of ',...
+                                  'your objective functions returned multiple values, while ',...
+                                  'you provided multiple objective functions. Only one of these formats ',...
+                                  'can be used for multi-objective optimization, not both.'])
+                        end
+
+                    % if evaluating the function fails, throw error
+                    catch userFcn_ME
+                        pop_ME = MException([mfilename ':function_doesnt_evaluate'], ...
+                                            'GODLIKE cannot continue: failure during function evaluation.');
+                        userFcn_ME = addCause(userFcn_ME, pop_ME);
+                        rethrow(userFcn_ME);
+                    end % try/catch
+
+                end % for
+
+                % see if the optimization is multi-objective
+                multi = ~single;
+
+                % loop through (all) constraint function(s)
+                if constrained && ...
+                        (options.ConstraintsInObjectiveFunction == 0)
+
+                    for ii = 1:numel(confcn)
+                        % some might be empty
+                        if isempty(confcn{ii})
+                            continue, end
+
+                        % try to evaluate the function
+                        try
+                            % simply evaluate the function with the lower bound
+                            con = feval(confcn{ii}, lb_original);
+                            % keep track of the number of function evaluations
+                            fevals = fevals + 1;
+                            % con MUST be a vector
+                            if ~isvector(con)
+                                error([mfilename ':confun_must_return_vector'], [...
+                                      'All constraint functions must return a [Nx1] or [1xN] vector ',...
+                                      'of constraint violations.\nSee the documentation for more details.']);
+                            end
+
+                        % if evaluating the function fails, throw error
+                        catch userFcn_ME
+                            pop_ME = MException([mfilename ':constraint_function_doesnt_evaluate'], [...
+                                                'GODLIKE cannot continue: failure during evaluation of ',...
+                                                'one of the constraint functions.']);
+                            userFcn_ME = addCause(userFcn_ME, pop_ME);
+                            rethrow(userFcn_ME);
+                        end 
+
+                    end 
+
+                end 
+
+            end 
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
             
         end 
         

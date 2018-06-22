@@ -3,8 +3,8 @@ function pop = constructPop(pop, varargin)
     % nargin check
     argc = nargin - 1;        
     if verLessThan('MATLAB', '8.3')
-        error(nargchk   (2,7,argc   ,'struct')); %#ok<*NCHKN>
-        error(nargoutchk(0,1,nargout,'struct')); %#ok<*NCHKE>
+        error(nargchk   (2,7,argc   ,'struct')); %#ok<NCHKN>
+        error(nargoutchk(0,1,nargout,'struct')); %#ok<NCHKE>
     else
         narginchk(3,8);        
     end
