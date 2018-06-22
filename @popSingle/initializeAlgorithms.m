@@ -2,6 +2,7 @@ function initializeAlgorithms(pop)
 
     % PSO
     switch (pop.algorithm)
+        
         case 'PSO'
         
 
@@ -113,8 +114,7 @@ function initializeAlgorithms(pop)
                 pop.pop_data.neighbor_best_fits(i, 1) = neighbor_best;
                 pop.pop_data.neighbor_best_inds(i, :) = pop.individuals(ind, :);
             end
-
-        % ASA
+        
         case  'ASA'
 
             % if the initial temperature is left empty, estimate
@@ -140,18 +140,9 @@ function initializeAlgorithms(pop)
             % initialize iterations
             pop.pop_data.iters = pop.iterations;
 
-    end
+    end 
     
 end 
-
-
-
-
-
-
-
-
-
 
 
 

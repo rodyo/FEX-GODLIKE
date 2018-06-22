@@ -1,4 +1,3 @@
-
 function options = check_parsed_input(argoutc, ...
                                       single,...
                                       multi,...
@@ -22,24 +21,6 @@ function options = check_parsed_input(argoutc, ...
 
     end
 
-    if (options.GODLIKE.ItersLb > options.GODLIKE.ItersUb)
-        warning([mfilename ':ItersLb_exceeds_ItersUb'], [...
-                'Value of options.GODLIKE.ItersLb is larger than value of\n',...
-                'options.GODLIKE.ItersUb. Values will simply be swapped.']);
-        u_b = options.GODLIKE.ItersUb;
-        options.GODLIKE.ItersUb = options.GODLIKE.ItersLb;
-        options.GODLIKE.ItersLb = u_b;
-    end
-
-    if (options.MinIters  > options.MaxIters)
-        warning([mfilename ':MaxIters_exceeds_MinIters'], [...
-                'Value of options.MinIters is larger than value of\n',...
-                'options.MaxIters. Values will simply be swapped.']);
-        u_b = options.MaxIters;
-        options.MaxIters = options.MinIters;
-        options.MinIters = u_b;
-    end
-
     if single
         % single objective optimization has a maximum of 4 output arguments
         if verLessThan('MATLAB', '8.6')
@@ -54,12 +35,6 @@ function options = check_parsed_input(argoutc, ...
         else
             nargoutchk(0, 6);
         end
-    end
-
-    if ~isempty(options.OutputFcn) && ...
-       ~all( cellfun(@(x) isa(x, 'function_handle'), options.OutputFcn))
-        error([mfilename ':outputFcn_shouldbe_function_handle'],...
-              'All output functions should be function handles.')
     end
 
     if strcmpi(options.display, 'plot') && single && dimensions > 2

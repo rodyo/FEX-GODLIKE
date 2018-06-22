@@ -140,15 +140,12 @@ function varargout = GODLIKE(funfcn, ...
     argo = nargout;
     if verLessThan('MATLAB', '7.13')
         error(   nargchk(3,inf,argc,'struct')); %#ok<*NCHKN>
-        error(nargoutchk(0,  6,argo,'struct'));   %#ok<*NCHKE>
+        error(nargoutchk(0,  6,argo,'struct')); %#ok<*NCHKE>
     else
         narginchk(3,inf);
         nargoutchk(0,6);
     end
-
     
-    
-    %{
     % Get options structure
     if (argc >= 10) 
         if argc == 10 
@@ -160,9 +157,7 @@ function varargout = GODLIKE(funfcn, ...
     else
         options = set_options();
     end
-    
-    % OK, time to create a devel branch. Committing this as a means to stash...
-    
+        
     unconstrained_objective = objFunction('objective_function', funfcn,...
                                           'lb'     , get_arg(1),...
                                           'ub'     , get_arg(2),...
@@ -171,35 +166,64 @@ function varargout = GODLIKE(funfcn, ...
                                           'Aeq'    , get_arg(5),...
                                           'beq'    , get_arg(6),...
                                           'nonlcon', get_arg(7),...
-                                          'intcon' , get_arg(8));
+                                          'intcon' , get_arg(8),...
+                                          'options', options);
     function arg = get_arg(n)
         arg = []; if argc-1>=n, arg = varargin{n}; end, end
-    %}
-    % {
-    lb = varargin{1};
-    ub = varargin{2};
-    varargin(1:2) = [];
-    %}
     
+    
+    dimensions = numel(unconstrained_objective.lb);
 
     % resize and reshape boundaries and dimensions
-    [lb,...
-     ub,...
-     sze,...
-     popsize,...
-     dimensions,...
+    %{
+    [sze,...
+     popsize,...     
      confcn,...
      constrained,...
      which_ones,...
-     options] = reformat_input(lb,ub,...
-                               varargin{:});
+     options] = reformat_input(varargin{:});
+ %}
+    
+
+    
+    % extract which algorithms to use
+    which_ones = options.algorithms(:);
+
+    % FIXME: (Rody Oldenhuis) move this to 
+    % {
+    % total population size
+    % (defaults to 25*number of dimensions)
+    if isempty(options.GODLIKE.popsize)
+        popsize = min(25*dimensions, 1500);
+    else
+        popsize = options.GODLIKE.popsize;
+    end
+
+    % check minimum popsize
+    minpop = 5*numel(options.algorithms);
+    if any(minpop > popsize)
+        warning([mfilename ':popsize_too_small'], [...
+                'Each algorithm requires a population size of at least 5.\n',...
+                'Given value for [popsize] makes this impossible. Increasing\n',...
+                'argument [popsize] to ', num2str(minpop), '...']);
+        popsize(minpop > popsize) = minpop;
+        options.GODLIKE.popsize = popsize;
+    end
+    %}
+    
+    
+    % FIXME: (Rody Oldenhuis) move this to objFunction()
+    % {
 
     % test input objective function(s) to determine the problem's dimensions,
     % number of objectives and proper input format
     [options,...
      single,...
      multi,...
-     test_evaluations] = test_funfcn(options);
+     test_evaluations] = test_funfcn(unconstrained_objective.lb, options);
+ 
+    %}
+    
 
     % initialize more variables
     number_of_algorithms = numel(which_ones);            % number of algorithms to use       
@@ -215,6 +239,7 @@ function varargout = GODLIKE(funfcn, ...
 
     % if an output function's been given, evaluate them to allow them to do 
     % any initialization they need
+    % TODO: (Rody Oldenhuis) MOVE TO (NESTED?) FUNCTION 
     state = 'init'; 
     if ~isempty(options.OutputFcn)
         cellfun(@(x) x([],[],state),...
@@ -283,6 +308,7 @@ function varargout = GODLIKE(funfcn, ...
                     pop{algo}.iterate;
 
                     % evaluate the output functions
+                    % TODO: (Rody Oldenhuis) MOVE TO (NESTED?) FUNCTION 
                     if ~isempty(options.OutputFcn)
                         % most intensive part, here in the inner loop
                         state = 'interrupt';
@@ -463,7 +489,8 @@ function varargout = GODLIKE(funfcn, ...
         end
     end
 
-     % last call to output function
+     % Last call to output function
+     % TODO: (Rody Oldenhuis) MOVE TO (NESTED?) FUNCTION 
     if ~isempty(options.OutputFcn)
         cellfun(@(y)y([],[], 'done'),...
                 options.OutputFcn,...
@@ -485,7 +512,7 @@ function varargout = GODLIKE(funfcn, ...
     function [options,...
               single,...
               multi,...
-              fevals] = test_funfcn(options)
+              fevals] = test_funfcn(lb, options)
 
         % initialize
         fevals = 0;
@@ -555,10 +582,10 @@ function varargout = GODLIKE(funfcn, ...
                 if (numel(sol) > 1) && (ii > 1)
                     error([mfilename ':multimulti_not_allowed'], [...
                           'GODLIKE cannot optimize multiple multi-objective problems ',...
-                          'simultaneously.\nUse GODLIKE multiple times on each of your objective ',...
+                          'simultaneously. Use GODLIKE multiple times on each of your objective ',...
                           'functions separately.\n\nThis error is generated because the first of ',...
-                          'your objective functions returned\nmultiple values, while ',...
-                          'you provided multiple objective functions. Only one of\nthese formats ',...
+                          'your objective functions returned multiple values, while ',...
+                          'you provided multiple objective functions. Only one of these formats ',...
                           'can be used for multi-objective optimization, not both.'])
                 end
 
@@ -604,20 +631,18 @@ function varargout = GODLIKE(funfcn, ...
                                         'one of the constraint functions.']);
                     userFcn_ME = addCause(userFcn_ME, pop_ME);
                     rethrow(userFcn_ME);
-                end % try/catch
+                end 
 
-            end % for
+            end 
 
-        end % if constrained
+        end 
 
-    end % nested function
+    end 
 
     
     % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
     % functions used in the main loop
     % =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =  =
-
-    
 
     % shuffle and (re)initialize the population objects
     function pop = interchange_populations(pop)
@@ -729,15 +754,15 @@ function varargout = GODLIKE(funfcn, ...
         end % for
 
         % shuffle everything at random
-        [dummy, rndinds] = sort(rand(total_popsize, 1));%#ok<ASGLU>
-        parent_pops = parent_pops(rndinds,:);    
-        parent_fits = parent_fits(rndinds,:);    
+        [~, rndinds] = sort(rand(total_popsize, 1));
+        parent_pops  = parent_pops(rndinds,:);    
+        parent_fits  = parent_fits(rndinds,:);    
         
         offspring_pops = offspring_pops(rndinds,:);
         offspring_fits = offspring_fits(rndinds,:);
 
         if multi
-            [dummy, rndinds2]  = sort(rand(crowding_size, 1));%#ok<ASGLU>
+            [~, rndinds2]      = sort(rand(crowding_size, 1));
             front_numbers      = front_numbers(rndinds,:);
             crowding_distances = crowding_distances(rndinds2,:);
         end
@@ -1145,7 +1170,7 @@ function varargout = GODLIKE(funfcn, ...
         ranges                   = max(non_dominated_fits) - origin;
         scaled_fitnesses         = bsxfun(@rdivide, shifted_fitnesses*min(ranges), ranges);
         distances_sq             = sum(scaled_fitnesses.^2,2);
-        [mindist_sq, index]      = min(distances_sq);%#ok
+        [~, index]               = min(distances_sq);
         most_efficient_point     = non_dominated(index, :);
         most_efficient_fitnesses = non_dominated_fits(index, :);
 
@@ -1182,7 +1207,7 @@ function varargout = GODLIKE(funfcn, ...
                            frac_popsize,...
                            frac_iterations,...
                            output);
-        end % if
+        end 
 
         % Plot
         if strcmpi(options.display, 'Plot')
@@ -1195,8 +1220,9 @@ function varargout = GODLIKE(funfcn, ...
                           pop,...
                           converged,...
                           output);
-        end % if
-    end % nested function
+        end 
+        
+    end
 
 end 
 

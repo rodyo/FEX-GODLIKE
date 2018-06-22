@@ -118,36 +118,30 @@ classdef objFunction < handle
                         if ~iscell(value)
                             value = {value}; end
                                               
-                        obj.funfcn = cellfun(@(x)verify_function_handle(x, 'objective function'),...
+                        obj.funfcn = cellfun(@(x)Verify.isFunctionHandle(x, 'objective function'),...
                                              value,...
                                              'UniformOutput', false);
-                                                        
-                    % Parameters
-                    case 'tolfun', obj.tolfun = verify_scalar(value, 'tolfun');
-                    case 'tolcon', obj.tolcon = verify_scalar(value, 'tolcon');
-                    case 'tolx'  , obj.tolx   = verify_scalar(value, 'tolx'  );
-                        
-
+                                                      
                     % Inequality constraints
                     % (checks are done later)
-                    case 'a', obj.A = verify_matrix(value, 'A');
-                    case 'b', obj.b = verify_vector(value, 'b');
+                    case 'a', obj.A = Verify.isMatrix(value, 'A');
+                    case 'b', obj.b = Verify.isVector(value, 'b');
 
                     % Equality constraints
                     % (checks are done later)
-                    case {'aeq' 'a_eq' 'ae'}, obj.Aeq = verify_matrix(value, 'A_eq');
-                    case {'beq' 'b_eq' 'be'}, obj.beq = verify_vector(value, 'b_eq');
+                    case {'aeq' 'a_eq' 'ae'}, obj.Aeq = Verify.isMatrix(value, 'A_eq');
+                    case {'beq' 'b_eq' 'be'}, obj.beq = Verify.isVector(value, 'b_eq');
 
                     % Bound constraints
                     % (checks are done later)
-                    case {'lb' 'lower' 'lower_bound'}, obj.lb = verify_vector(value, 'lb');
-                    case {'ub' 'upper' 'upper_bound'}, obj.ub = verify_vector(value, 'ub');
+                    case {'lb' 'lower' 'lower_bound'}, obj.lb = Verify.isVector(value, 'lb');
+                    case {'ub' 'upper' 'upper_bound'}, obj.ub = Verify.isVector(value, 'ub');
                         
                     % Non-linear constraints
                     case 'nonlcon'   
                         if ~isempty(value)
-                            obj.nonlcon{end+1} = verify_function_handle(value,...
-                                                                        'Non-linear constraint function');
+                            obj.nonlcon{end+1} = Verify.isFunctionHandle(value,...
+                                                                         'Non-linear constraint function');
                         end
 
                     % Integer constraints
@@ -160,24 +154,26 @@ classdef objFunction < handle
                         %   an array of valid integers for that variable                        
                         obj.intcon = value;
 
-
-                    % Non-linear constraints are evaluated inside the 
-                    % objective function
-                    case {'constraints_in_objective_function' 'constrinobj'}
                         
-                        value = check_logical(value,...
-                                              'constraints_in_objective_function');
-                        obj.nonlinear_constraints_from_objective_function = value;
+                    % Parameters
+                    case 'options'
                         
-                    % The objective function returns multiple arguments,
-                    % which are interpreted as the values of mulitple objective 
-                    % functions.
-                    case {'number_of_objectives' 'objectives'}
+                        options = value;
                         
-                        obj.number_of_objectives = verify_scalar(value, ...
-                                                                 'number_of_objectives');                        
-                        obj.defines_multiple_objectives = value > 1;                        
-
+                        obj.tolfun = options.TolFun;
+                        obj.tolx   = options.TolX;
+                        obj.tolcon = options.TolCon;                        
+                             
+                        % Non-linear constraints are evaluated inside the 
+                        % objective function
+                        obj.nonlinear_constraints_from_objective_function = options.ConstraintsInObjectiveFunction;
+                        
+                        % The objective function(s) return(s) multiple arguments,
+                        % which are interpreted as the values of mulitple objective
+                        % functions.  
+                        obj.number_of_objectives = options.NumObjectives;
+                        obj.defines_multiple_objectives = sum(obj.number_of_objectives) > 1;
+                        
                     % Unsupported parameter
                     otherwise
                         warning([mfilename('class') ':unsupported_parameter'],...
@@ -189,70 +185,6 @@ classdef objFunction < handle
             
             % Further checks and initializations
             obj.postConstructionChecks();
-            
-            
-            % Validators -------------------------------------------------------
-            
-            % Check that given parameter is an array of real and finite numbers
-            function a = check_double_array(a, parameter_name)
-                assert(isnumeric(a) && all(isfinite(a(:))) && all(isreal(a(:))),...
-                       [mfilename('class') ':datatype_error'], ...
-                       'Argument "%s" must be an array of real, finite values.',...
-                       parameter_name);                
-            end
-            
-            function s = verify_scalar(s, parameter_name)
-                check_double_array(s, parameter_name);
-                assert(isempty(s) || isscalar(s),...
-                       [mfilename('class') ':datadims_error'],...
-                       'Argument "%s" must be a scalar.',...
-                       parameter_name);
-            end
-            
-            function v = verify_vector(v, parameter_name)
-                check_double_array(v, parameter_name);
-                assert(isempty(v) || isvector(v),...
-                       [mfilename('class') ':datadims_error'],...
-                       'Argument "%s" must be a vector.',...
-                       parameter_name);
-            end
-            
-            function M = verify_matrix(M, parameter_name)
-                check_double_array(M, parameter_name);
-                assert(isempty(M) || ismatrix(M),...% > R2010b
-                       [mfilename('class') ':datadims_error'],...
-                       'Argument "%s" must be a matrix.',...
-                       parameter_name);
-            end
-            
-            function F = verify_function_handle(F, parameter_name)
-                assert(isa(F, 'function_handle'),...
-                       [mfilename('class') ':datatype_error'],...
-                       'Argument "%s" must be specified with a function handle.',...
-                       parameter_name);
-            end
-            
-            % Check that given parameter is a boolean
-            function L = check_logical(L, parameter_name)
-                if ischar(L)
-                    switch lower(L)
-                        case {'no' 'off' 'none' 'nope' 'false' 'n'}
-                            L = false;
-                        case {'yes' 'yup' 'true'  'y'}
-                            L = true;
-                        otherwise
-                            error([mfilename('class') ':datatype_error'], [...
-                                  'When specifying argument "%s" via string, ',...
-                                  'that string must equal either "yes" or "no".'],...
-                                  parameter_name);
-                    end
-                else
-                    assert(islogical(L) && isscalar(value),...
-                          [mfilename('class') ':datatype_error'], ...
-                          'Argument "%s" must be a logical scalar.',...
-                          parameter_name);
-                end
-            end
             
         end
         

@@ -24,6 +24,11 @@ function options = set_options(varargin)
 %                 1 and 3 objectives for multi-objective optimization.
 %                 Please note that using any other display setting than
 %                 'off' can significantly slow down the optimization.
+%    Dimensions : The problem's dimensions (size of X) are automatically deduced 
+%                 from arguments lb,ub, A,b, or Aeq,beq. However, this can not 
+%                 be done when optimizing an unconstrained problem. For those
+%                 problems, the dimensionality can be given explicitly via this 
+%                 option.
 %   MaxFunEvals : positive scalar, defining the maximum number of
 %                 allowable function evaluations. The default is 100,000.
 %                 Note that every objective and constraint function
@@ -40,6 +45,12 @@ function options = set_options(varargin)
 %                 fronts), while a Pareto front of much better quality is
 %                 obtained if some additional shuffles are performed. The
 %                 default value is 2.
+%        TolCon : positive scalar, defining the tolerance on any of the
+%                 constraints. A constraint is considered satisfied if the
+%                 absolute value of the difference between the constraint and 
+%                 actual values is less than TolCon. This applies equally to all
+%                 constraints -- bound constraints, linear (in)equality
+%                 constraints, non-linear constraints and integer constraints.
 %   UseParallel : logical, either false (default), or true. If enabled, it
 %                 will use run function evaluations within each
 %                 generation in parallel. It uses MATLAB's native parfor
@@ -206,6 +217,10 @@ Document these options:
    - algorithms
    - ConstraintsInObjectiveFunction
    - ReinitRatio
+
+Adjust documentation for these:
+- NumObjectives (is now a vector) 
+
 %}
 
 
@@ -220,19 +235,18 @@ Document these options:
                          %{
                          General options
                          %}
-                         'display'      , 'off',...
-                         'MaxFunEvals'  , 1e5,...
-                         'MaxIters'     , 20,...
-                         'MinIters'     , 2,...
-                         'TolIters'     , 15,...
-                         'TolX'         , 1e-4,...
-                         'TolFun'       , 1e-4,...
-                         'AchieveFunVal', inf,...
-                         'UseParallel'  , false,...
-                         %{
-                         TODO: Not yet implemented
-                         %}
+                         'Display'         , 'off',...                         
+                         'Dimensions'      , [],...
+                         'NumObjectives'   , 1,...
+                         'MaxFunEvals'     , 1e5,...
+                         'MaxIters'        , 20,...
+                         'MinIters'        , 2,...
+                         'TolIters'        , 15,...
+                         'TolX'            , 1e-4,...
+                         'TolFun'          , 1e-4,...
                          'TolCon'          , 1e-4,...
+                         'AchieveFunVal'   , inf,...
+                         'UseParallel'     , false,...                         
                          'OutputFcn'       , [],...                         
                          'algorithms'      , {{'PSO';'GA';'ASA';'DE'}},...                         
                          'ReinitRatio'     , 0.05,...
@@ -241,10 +255,8 @@ Document these options:
                          %{
                          function evaluation
                          CAN'T BE SET MANUALLY - INTERNAL USE ONLY
-                         %}
-                         'num_objectives', 1,...
-                         'dimensions'    , [],...
-                         'obj_columns'   , false,... % Function returns objectives as columns?
+                         %}                         
+                         'obj_columns'  , false,... % Function returns objectives as columns?
                          %{
                          Differential Evolution
                          %}
@@ -287,24 +299,23 @@ Document these options:
 
         % assign default values
         options = set_options();
+        fields  = fieldnames(options);
 
         % errortrap
-        if (mod(nargin, 2) ~= 0)
-            error([mfilename ':invalid_argument_count'],...
-                  'Please provide values for all the options.')
-        end
+        assert(mod(nargin, 2) == 0,...
+               [mfilename ':invalid_argument_count'],...
+               'Please provide values for all the options.');
 
         % loop through all the inputs, and use an "if-else cancer" to
         % create the problem structure
-        for i = 1:2:nargin
-            option = varargin{i};
-            value  = varargin{i+1};
-
-            % if option is not recognized, continue to the next argument
-            if ~isa(option, 'char')
-                throwwarning(option, [], [], []);
-                continue;
-            end
+        for ii = 1:2:nargin
+            
+            option = varargin{ii};
+            value  = varargin{ii+1};
+                        
+            Verify.isString(option, int2str(ii));
+            
+            field = fields(strcmpi(fields, option));
 
             % parse all available options
             switch lower(option)
@@ -313,11 +324,9 @@ Document these options:
                 % GENERAL OPTIONS
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 case 'display'
-                    if ~ischar(value)
-                        throwwarning('Display', 'char', value);
-                        continue;
-                    end
-
+                    
+                    value = Verify.isString(value, 'Display');
+                    
                     switch lower(value)
                         case 'off'
                             options.display = [];
@@ -327,66 +336,60 @@ Document these options:
                             options.display = 'Plot';
                         otherwise
                             error([mfilename ':unknown_displaytype'], [...
-                                  'Unsupported display type: ', '''', value, '''.'])
+                                'Unsupported display type: ', '''', value, '''.'])
                     end
-
-
+                    
+                case 'dimensions'
+                    value = Verify.isVector(value, field);
+                    value = Verify.isInteger(value, field);
+                    options.(field) = value;
+                    
                 case 'maxfunevals'
-                    if ~isnumeric(value)
-                        throwwarning('MaxFunEvals', 'double', value);
-                        continue;
-                    end
-                    options.MaxFunEvals = value;
-
+                    value = Verify.isScalar(value, field);
+                    value = Verify.isInteger(value, field);
+                    value = Verify.isPositive(value, field);
+                    options.(field) = value;
+                    
                 case 'maxiters'
-                    if ~isnumeric(value)
-                        throwwarning('MaxIters', 'double', value);
-                        continue;
-                    end
-                    options.MaxIters = value;
-
+                    value = Verify.isScalar(value, field);
+                    value = Verify.isInteger(value, field);
+                    value = Verify.isPositive(value, field);                    
+                    options.(field) = value;
+                    
                 case 'miniters'
-                    if ~isnumeric(value)
-                        throwwarning('MinIters', 'double', value);
-                        continue;
-                    end
-                    options.MinIters = value;
-
+                    value = Verify.isScalar(value, field);
+                    value = Verify.isInteger(value, field);
+                    value = Verify.isPositive(value, field);                    
+                    options.(field) = value;
+                    
                 case 'toliters'
-                    if ~isnumeric(value)
-                        throwwarning('TolIters', 'double', value);
-                        continue;
-                    end
-                    options.TolIters = value;
+                    value = Verify.isScalar(value, field);
+                    value = Verify.isInteger(value, field);
+                    value = Verify.isPositive(value, field);
+                    options.(field) = value;
 
                 case 'tolx'
-                    if ~isnumeric(value)
-                        throwwarning('TolX', 'double', value);
-                        continue;
-                    end
-                    options.TolX = value;
+                    value = Verify.isVector(value, field);
+                    value = Verify.isPositive(value, field);                    
+                    options.(field) = value;
 
                 case 'tolfun'
-                    if ~isnumeric(value)
-                        throwwarning('TolFun', 'double', value);
-                        continue;
-                    end
-                    options.TolFun = value;
+                    value = Verify.isVector(value, field);
+                    value = Verify.isPositive(value, field);                    
+                    options.(field) = value;
+                    
+                case 'tolcon'
+                    value = Verify.isScalar(value, field);
+                    value = Verify.isPositive(value, field);                    
+                    options.(field) = value;
 
                 case 'achievefunval'
-                    if ~isnumeric(value)
-                        throwwarning('AchieveFunVal', 'double', value);
-                        continue;
-                    end
-                    options.AchieveFunVal = value;
+                    value = Verify.isVector(value, field);
+                    options.(field) = value;
 
-                case 'useparallel'
-                    value = string2logical(value);
-                    if ~isscalar(value) || ~islogical(value)
-                        throwwarning('UseParallel', 'double', value);
-                        continue;
-                    end
-                    options.UseParallel = value;
+                case 'useparallel'                    
+                    value = Verif.isLogical(value, field);
+                    options.(field) = value;
 
                     % Check for toolbox
                     if value && isempty(ver('distcomp'))
@@ -397,101 +400,84 @@ Document these options:
                     end
 
                 case 'quitwhenachieved'
-                    value = string2logical(value);
-                    if ~isscalar(value) && ~islogical(value)
-                        throwwarning('AchieveFunVal', 'logical', value);
-                        continue;
-                    end
-                    options.QuitWhenAchieved = value;
+                    value = Verif.isLogical(value, field);
+                    options.(field) = value;
 
                 case 'constraintsinobjectivefunction'
-                    if ~isnumeric(value)
-                        throwwarning('ConstraintsInObjectiveFunction', 'numeric', value);
-                        continue;
-                    end
+                    
+                    value = Verify.isVector(value, field);
+                                        
                     % of course, the FIRST argument MUST be the objective
                     % function(s) values
-                    if (value == 1)
+                    one = (value == 1);
+                    if any(one)
                         warning([mfilename ':first_argument_mustbe_objective'], [...
                                 'The first argument of the objective function must return the values\n',...
                                 ' of the objective function(s); The requested setting of \n',...
                                 ' OPTIONS.ConstraintsInObjectiveFunction of %d is therefore invalid. \n',...
                                 ' Attempting to solve the problem with argument 2...'], ...
                                 value);
-                        value = 2;
+                        value(one) = 2;
                     end
-                    options.ConstraintsInObjectiveFunction = value;
+                    options.(field) = value;
 
                 case 'outputfcn'
-                    if ~iscell(value) && ~isa(value, 'function_handle')
-                        throwwarning('OutputFcn', 'cell or function_handle', value);
-                        continue;
-                    end
-                    if ~iscell(options.OutputFcn)
-                        options.OutputFcn = {value};
-                    else
-                        options.OutputFcn = value;
-                    end
+                    
+                    assert(iscell(value) || isa(value, 'function_handle'),...
+                           [mfilename ':datatype_error'], [...
+                           'Argument ''OutputFcn'' must be a function_handle ',...
+                           'or a cell array of function handles.']);
+                        
+                    if ~iscell(value)
+                        value = {value}; end
+                    
+                    options.(field) = cellfun(@(x) Verify.isFunctionHandle(x, 'OutputFcn'),...
+                                              value,...
+                                              'UniformOutput', false);
 
                 case 'algorithms'
 
                     % check input
                     if ischar(value)
                         value = {value}; end
-                    if ~iscell(value)
-                        throwwarning('Algorithms', 'cell', value);
-                        continue;
-                    end
+                    
+                    assert(iscell(value),...
+                           [mfilename ':datatype_error'], [...
+                           'Argument ''algorithms'' must be a character vector ',...
+                           'or cell array of character vectors.']);
 
-                    % check if each one of them is a character array
-                    chars_ok = cellfun(@ischar, value);
-                    if ~all(chars_ok)
-                        warning([mfilename ':algorithms_mustbe_chars'], [...
-                                'Algorithms must be selected via a cell-array of character arrays.\n',...
-                                'Using default settings instead...']);
-                        continue;
-                    end
-                    % check if each one is equal to either 'MS', 'DE', 'GA', 'PSO', or 'ASA'
+                    % Check if each one of them is a character array
+                    value = cellfun(@(x)Verify.isChar(x),...
+                                    value,...
+                                    'UniformOutput', false);
+                    
+                    % Check if each one is equal to either 'MS', 'DE', 'GA', 'PSO', or 'ASA'
                     algorithm_ok = cellfun(@(x) any(strcmpi(x, {'MS';'DE';'GA';'PSO';'ASA'})), value);
-                    if ~all(chars_ok)
-                        warning([mfilename ':unknown_algorithm'],...
-                                'Unknown algorithm: ''%s''. Using default settings...',...
-                                value{find(~algorithm_ok,1)});
-                        continue;
-                    end
-                    % all is ok; set the algorithms
-                    options.algorithms = upper(value);
+                    assert(all(algorithm_ok),...
+                           [mfilename ':unknown_algorithm'],...
+                           'Unknown algorithm: ''%s''.');
+                        
+                    options.(field) = upper(value);
 
                 case 'reinitratio'
-                    if ~isnumeric(value)
-                        throwwarning('ReinitRatio', 'double', value);
-                        continue;
-                    end
-                    options.ReinitRatio = value;
+                    value = Verify.isScalar(value, field);
+                    value = Verify.isPositive(value, field);
+                    options.(field) = value;
 
 
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 % OPTIONS SPECIFIC TO DIFFERENTIAL EVOLUTION
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 case 'flb'
-                    if ~isnumeric(value)
-                        throwwarning('Flb', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'Flb');
                     options.DE.Flb = value;
 
                 case 'fub'
-                    if ~isnumeric(value)
-                        throwwarning('Fub', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'Fub');
                     options.DE.Fub = value;
 
                 case 'crossconst'
-                    if ~isnumeric(value)
-                        throwwarning('CrossConst', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'CrossConst');
                     options.DE.CrossConst = value;
 
 
@@ -499,108 +485,72 @@ Document these options:
                 % OPTIONS SPECIFIC TO GENETIC ALGORITHM
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 case 'mutationprob'
-                    if ~isnumeric(value)
-                        throwwarning('MutationProb', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'MutationProb');
                     options.GA.MutationProb = value;
 
                 case 'crossprob'
-                    if ~isnumeric(value)
-                        throwwarning('CrossProb', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'CrossProb');
                     options.GA.CrossProb = value;
 
                 case 'coding'
-                    if ~ischar(value)
-                        throwwarning('Coding', 'char', value);
-                        continue;
-                    end
-                    if     strcmpi(value, 'Real')
-                        options.GA.Coding = 'Real';
-                    elseif strcmpi(value, 'Binary')
-                        options.GA.Coding = 'Binary';
+                    
+                    Verify.isChar(value, 'Coding');
+                    
+                    if strcmpi(value, 'Real'),       options.GA.Coding = 'Real';
+                    elseif strcmpi(value, 'Binary'), options.GA.Coding = 'Binary';
                     else
                         error([mfilename ':unknown_coding'], [...
                               'Unknown coding type: ', '''', value, '''.'])
                     end
 
                 case 'numbits'
-                    if ~isnumeric(value)
-                        throwwarning('NumBits', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'NumBits');
                     options.GA.NumBits = value;
 
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 % OPTIONS SPECIFIC TO ADAPTIVE SIMULATED ANNEALING
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 case 't0'
-                    if ~isnumeric(value)
-                        throwwarning('T0', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'T0');
                     options.ASA.T0 = abs(real(value));
 
                 case 'coolingschedule'
-                    if ~isa(value, 'function_handle')
-                        throwwarning('CoolingSchedule', 'function_handle', value);
-                        continue;
-                    end
+                    value = Verify.isFunctionHandle(value, 'CoolingSchedule');                    
                     options.ASA.CoolingSchedule = value;
 
                 case 'reheating'
-                    if ~isa(value, 'double')
-                        throwwarning('ReHeating', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'ReHeating');
                     options.ASA.ReHeating = value;
-
 
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 % OPTIONS SPECIFIC TO PARTICLE SWARM OPTIMIZATION
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 case 'eta1'
-                    if ~isnumeric(value)
-                        throwwarning('eta1', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'eta1');
                     options.PSO.eta1 = value;
 
                 case 'eta2'
-                    if ~isnumeric(value)
-                        throwwarning('eta2', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'eta2');
                     options.PSO.eta2 = value;
 
                 case 'eta3'
-                    if ~isnumeric(value)
-                        throwwarning('eta3', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'eta3');
                     options.PSO.eta3 = value;
 
                 case 'omega'
-                    if ~isnumeric(value)
-                        throwwarning('omega', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'omega');
                     options.PSO.omega = value;
 
                 case 'numneighbors'
-                    if ~isnumeric(value)
-                        throwwarning('NumNeighbors', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'NumNeighbors');
+                    value = Verify.isInteger(value, 'NumNeighbors');
                     options.PSO.NumNeighbors = value;
 
                 case 'networktopology'
-                    if ~ischar(value)
-                        throwwarning('NetworkTopology', 'char', value);
-                        continue;
-                    end
+                    
+                    value = Verify.isChar(value, field);
+                    value = Verify.isInteger(value, field);
+                                        
                     if strcmpi(value, 'fully_connected')
                         options.PSO.NetworkTopology = 'fully_connected';
                     elseif strcmpi(value, 'star')
@@ -615,69 +565,78 @@ Document these options:
 
                 % options specific to GODLIKE algorithm
                 case 'iterslb'
-                    if ~isnumeric(value)
-                        throwwarning('algiters', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'ItersLb');                    
+                    value = Verify.isInteger(value, 'ItersLb');
+                    value = Verify.isPositive(value, 'ItersLb');
                     options.GODLIKE.ItersLb = value;
+                    
                 case 'itersub'
-                    if ~isnumeric(value)
-                        throwwarning('ItersUb', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'ItersUb');
+                    value = Verify.isInteger(value, 'ItersUb');
+                    value = Verify.isPositive(value, 'ItersUb');
                     options.GODLIKE.ItersUb = value;
 
                 case 'popsize'
-                    if any(~isreal(value)) || any(~isfinite(value)) || any(value < 0)
-                        throwwarning('popsize', 'double', value);
-                        continue;
-                    end
+                    value = Verify.isScalar(value, 'popsize');
+                    value = Verify.isInteger(value, 'popsize');
+                    value = Verify.isPositive(value, 'popsize');
                     options.GODLIKE.popsize = value;
 
                 % General Settings
                 case 'numobjectives'
-                    if ~isnumeric(value)
-                        throwwarning('NumObjectives', 'double', value);
-                        continue;
-                    end
-                    options.num_objectives = value;
-
+                    value = Verify.isVector(value, field);
+                    value = Verify.isInteger(value, field);
+                    value = Verify.isPositive(value, field);
+                    options.(field) = value;
 
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 % ALL OTHER CASES
                 % =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
                 otherwise
-                    throwwarning(option);
+                    warning([mfilename ':unsupported_option'], ...
+                            'Unsupported option ''%s''; ignoring...',...
+                            option);
 
-            end % switch
-        end % for
-    end % if
+            end 
+        end 
+                
+    end 
+    
+    % Post-processing checks -----------------------------------------------
+       
+    assert(options.MinIters <= options.MaxIters,...
+           [mfilename ':inconsistent_bounds'],...
+           'Value for option "MinIters" should be lower than "MaxIters".');
+    
+    assert(options.GODLIKE.ItersLb <= options.GODLIKE.ItersUb,...
+           [mfilename ':inconsistent_bounds'],...
+           'Value for option "ItersLb" should be lower than "ItersUb".');
+       
+	assert(options.DE.Flb <= options.DE.Fub,...
+           [mfilename ':inconsistent_bounds'],...
+           'Value for option "Flb" should be lower than "Fub".');
+       
+    num_objectives = sum(options.NumObjectives);
+    if num_objectives > 1
+        
+        fields = {'TolX', 'TolFun' 'AchieveFunVal'};
+        for ii = 1:numel(fields)
+            
+            option = options.(fields{ii});
+            if isscalar(option)
+                options.(fields{ii}) = repmat(option, num_objectives,1); end
 
-end % function (set options)
-
-% Throw appropriate warning upon abuse of the function
-function throwwarning(option, required, given, varargin)%#ok
-
-    % test type
-    if nargin == 3
-        provided = whos('given');
-        provided = provided.class;
-        warning([mfilename ':invalid_value'], [...
-                'Incorrect class type given for option ''%s'';\n',...
-                'required type is ''%s'', received ''%s''.\n',...
-                'Using default value.'], ...
-                option, required, provided);
-
-    % unrecognized options will be ignored
-    else
-        warning([mfilename ':invalid_option'], ...
-                'Unrecognized option, ''%s''; ignoring.', ...
-                num2str(option));
-    end % if
-end % nested function
-
-
-% Allow logicals to be given as string {'on' | 'off'}
-function value = string2logical(value)
-    value = strcmpi(value, 'on');    
+            assert(~isempty(option) && numel(options.(fields{ii})==num_objectives),...
+                   [mfilename ':dimension_mismatch'], [...
+                   'Dimensions of option "%s" disagree with the dimensions ',...
+                   'implied by option "NumObjectives". Please ensure that ',...
+                   'numel(options.%s) == sum(options.NumObjectives).'],...
+                   fields{ii}, fields{ii});
+               
+        end
+        
+    end
+    
 end
+
+
